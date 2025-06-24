@@ -1252,7 +1252,7 @@ def Reveneue_Pax(Param, PAX):
     return R_Pax
 
 
-def Revenue_Rent(Param, K):
+def Revenue_Rent(Param, K_Jet, K_LH):
     """
     This function calculates the revenues from renting out spaces within the terminal.
 
@@ -1271,13 +1271,27 @@ def Revenue_Rent(Param, K):
         "re_Rent"
     ]  # Revenue from renting spaces in USD per unit of capacity K
 
+    if K_Jet.ndim == 2:
+        K_Jet = K_Jet
+    elif K_Jet.ndim == 3:
+        K_Jet = np.sum(K_Jet, axis=2)
+    else:
+        raise ValueError("K_Jet has neither 2D or 3D shape")
+
+    if K_LH.ndim == 2:
+        K_LH = K_LH
+    elif K_LH.ndim == 3:
+        K_LH = np.sum(K_LH, axis=2)
+    else:
+        raise ValueError("K_LH has neither 2D or 3D shape")
+
     # Calculate the total revenue from renting
-    R_Rent = K * re_Rent
+    R_Rent = (K_Jet + K_LH) * re_Rent
 
     return R_Rent
 
 
-def Total_Revenue_calculation(Param, K, K_Jet, K_LH, D_Jet, D_LH, PAX):
+def Total_Revenue_calculation(Param, K_Jet, K_LH, D_Jet, D_LH, PAX):
     """
     This function calculates the total revenues from the airport infrastructure based on
     the Jet A1 and LH2 aircraft stand operation, as well as terminal and rental revenues.
@@ -1307,7 +1321,7 @@ def Total_Revenue_calculation(Param, K, K_Jet, K_LH, D_Jet, D_LH, PAX):
     R_Pax = Reveneue_Pax(Param, PAX)
 
     # Calculate the revenue from renting
-    R_Rent = Revenue_Rent(Param, K)
+    R_Rent = Revenue_Rent(Param, K_Jet, K_LH)
 
     # Total revenue is the sum of all revenues
     Total_revenue = R_Jet + R_LH + R_Pax + R_Rent
@@ -1315,7 +1329,7 @@ def Total_Revenue_calculation(Param, K, K_Jet, K_LH, D_Jet, D_LH, PAX):
     return Total_revenue
 
 
-def NPV_calculation(Param, delta_K, delta_K_Jet, delta_K_LH, ATM, S_value_matrix, PAX):
+def NPV_calculation(Param, delta_K_Jet, delta_K_LH, ATM, S_value_matrix, PAX):
     """
     This function calculates the Net Present Value (NPV) of the airport infrastructure project based on the
     capital expenditure (Capex), operational expenditure (Opex), and revenues from Jet A1 and LH2 aircraft stands, as well as terminal and rental revenues.
@@ -1345,14 +1359,13 @@ def NPV_calculation(Param, delta_K, delta_K_Jet, delta_K_LH, ATM, S_value_matrix
     elif ATM.ndim == 3:
         D_Jet = np.round((ATM * (1 - S_value_matrix)[:, :, np.newaxis]), 0)
         D_LH = np.round(ATM * S_value_matrix[:, :, np.newaxis], 0)
-    K = Capacity_2D(Param, delta_K)
     K_Jet = Capacity_3D(Param, delta_K_Jet_Matrix)  # Jet A1 aircraft stand capacity
     K_LH = Capacity_3D(Param, delta_K_LH_Matrix, True)  # LH2 aircraft stand capacity
 
     Cost = Total_Cost_calculation(
         Param, delta_K_Jet, delta_K_LH, K_Jet, K_LH, D_Jet, D_LH, PAX
     )
-    Revenue = Total_Revenue_calculation(Param, K, K_Jet, K_LH, D_Jet, D_LH, PAX)
+    Revenue = Total_Revenue_calculation(Param, K_Jet, K_LH, D_Jet, D_LH, PAX)
     Profit = Revenue - Cost
     # Discount per year:
     Discount = 1 / ((1 + discount_rate) ** np.arange(Profit.shape[1]))
@@ -1364,7 +1377,7 @@ def NPV_calculation(Param, delta_K, delta_K_Jet, delta_K_LH, ATM, S_value_matrix
     return NPV
 
 
-def ENPV_calculation(Param, delta_K, delta_K_Jet, delta_K_LH, ATM, S_values, Pax):
+def ENPV_calculation(Param, delta_K_Jet, delta_K_LH, ATM, S_values, Pax):
     """
     This function calculates the Expected Net Present Value (NPV) of the airport infrastructure project based on the Net Present Value (NPV) calculation for each scenario.
 
@@ -1395,7 +1408,7 @@ def ENPV_calculation(Param, delta_K, delta_K_Jet, delta_K_LH, ATM, S_values, Pax
         delta_K_LH = delta_K_LH
 
     # Calculate NPV for each scenario
-    NPV = NPV_calculation(Param, delta_K, delta_K_Jet, delta_K_LH, ATM, S_values, Pax)
+    NPV = NPV_calculation(Param, delta_K_Jet, delta_K_LH, ATM, S_values, Pax)
     Sum_NPV = np.sum(NPV)  # Sum of NPV values
 
     ENPV = Sum_NPV / len(NPV)  # Expected NPV is the average of NPV values
@@ -1468,14 +1481,14 @@ def GA_dual(Param, ATM, S_values, PAX):
         # Sum over mix axis → shape (Fth,)
         delta_K_Jet = np.sum(delta_K_Jet_Mix, axis=1)
         delta_K_LH = np.sum(delta_K_LH_Mix, axis=1)
-        delta_K = delta_K_Jet + delta_K_LH
+        # delta_K = delta_K_Jet + delta_K_LH
 
         # Broadcast to (No_Forecasts, Fth, Mix) for ENPV calculation
         delta_K_Jet_full = np.broadcast_to(delta_K_Jet_Mix, ATM.shape)
         delta_K_LH_full = np.broadcast_to(delta_K_LH_Mix, ATM.shape)
 
         enpv = ENPV_calculation(
-            Param, delta_K, delta_K_Jet_full, delta_K_LH_full, ATM, S_values, PAX
+            Param, delta_K_Jet_full, delta_K_LH_full, ATM, S_values, PAX
         )
         return (enpv,)
 
@@ -1551,8 +1564,8 @@ def Decision_Rule(Param, K0, D, theta, condition):
 
         for t in range(1, D.shape[1]):
             diff = K_Flex[:, t - 1] - D[:, t]
-            over_capacity = np.greater_equal(diff, condition).astype(int)
-            under_capacity = np.less(diff, condition).astype(int)
+            over_capacity = np.greater(diff, condition).astype(int)
+            under_capacity = np.less_equal(diff, condition).astype(int)
             K_Flex[:, t] = over_capacity * K_Flex[:, t - 1] + under_capacity * (
                 K_Flex[:, t - 1] + theta
             )
@@ -1568,8 +1581,8 @@ def Decision_Rule(Param, K0, D, theta, condition):
         for mix in range(D.shape[2]):
             for t in range(1, D.shape[1]):
                 diff = K_Flex[:, t - 1, mix] - D[:, t, mix]
-                over_capacity = np.greater_equal(diff, condition).astype(int)
-                under_capacity = np.less(diff, condition).astype(int)
+                over_capacity = np.greater(diff, condition).astype(int)
+                under_capacity = np.less_equal(diff, condition).astype(int)
                 K_Flex[:, t, mix] = over_capacity * K_Flex[
                     :, t - 1, mix
                 ] + under_capacity * (K_Flex[:, t - 1, mix] + theta)
@@ -1898,31 +1911,3 @@ def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
     plt.show()
     percentiles = [percentile_10a, percentile_90a, percentile_10b, percentile_90b]
     return percentiles
-
-
-def Dockstands(K, Param):
-    """
-    This function calculates the Demand for Dockstands (Design Hour Load) given a
-    capacty (K) and parameters (Param)
-
-    Args:
-        K (ndarray): Capacity Matrix
-        Param (dict): Parameter Dictionary
-
-    Returns:
-        dockstands (ndarray): Demand for Dockstands
-
-    To call this Function use following syntax:
-        Dockstands(K, Param)
-    """
-    # Parameters
-    DHL_factor_20 = Param["DHL_factor_20"]  # Factor to calculate the Design Hour Load
-    p_Dock = Param["p_dock"]  # Percentage of Pax using Dock Stands
-    p_schengen = Param["p_schengen"]  # Percentage of Pax travelling within Schengen
-    p_Dok_A_B = Param["p_Dok_A_B"]  # Percentage of Pax travelling from Dock A
-    PAXATM = Param["PAXATM"]  # Average passenger no carried per air traffic movement
-
-    DHL = K * DHL_factor_20
-    dockstands = np.ceil((DHL * p_Dock * p_schengen * p_Dok_A_B) / PAXATM)
-
-    return dockstands
