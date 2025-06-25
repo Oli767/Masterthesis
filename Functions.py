@@ -1626,10 +1626,111 @@ def Optimization_parameters(Param, n):
     theta = np.arange(lower_theta, upper_theta, stepsize_theta)
     optimization_params = list(itertools.product(theta, condition))
 
-    indices = np.random.choice(len(optimization_params), size=n, replace=False)
+    indices = np.random.choice(
+        len(optimization_params), size=(min(n, len(optimization_params))), replace=False
+    )
     optimization_params_sample = [optimization_params[i] for i in indices]
 
     return optimization_params_sample
+
+
+def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
+    """
+    This function is Plotting the Cumulative Density Function of the NPVs
+    Args:
+        Vector1 (ndarray): Input Vector 1
+        Vector2 (ndarray): Input Vector 2
+        label1 (str): First CDF Curve
+        label2 (str): Second CDF Curve
+        label3 (str): First ENPV Value
+        label4 (str): Second ENPV Value
+
+    Returns:
+        Plot of all input Vectors in a CDF Graphic
+        + Visualisation of the 10th, 90th Percentile of the Input Vectors
+
+    To call this Function use following syntax:
+        CDF_Plot(Vector1, Vector2, label1, label2, label3, label4)
+    """
+    percentile_10a = np.percentile(Vector1, 10)
+    percentile_90a = np.percentile(Vector1, 90)
+    percentile_10b = np.percentile(Vector2, 10)
+    percentile_90b = np.percentile(Vector2, 90)
+
+    # Creating a subplot
+    fig, ax = plt.subplots()
+
+    # Step plot code with specific values
+    ax.plot(
+        np.sort(Vector1),
+        np.arange(1, len(Vector1) + 1) / float(len(Vector1)),
+        linestyle="-",
+        label=label1 + " CDF Curve",
+        linewidth=2,
+        color="green",
+        alpha=0.7,
+    )
+
+    ax.plot(
+        np.sort(Vector2),
+        np.arange(1, len(Vector2) + 1) / float(len(Vector2)),
+        linestyle="-",
+        label=label2 + " CDF Curve",
+        linewidth=2,
+        color="blue",
+        alpha=0.7,
+    )
+
+    mean1 = np.mean(Vector1)
+    Vector3 = np.full_like(Vector1, mean1)
+    ax.plot(
+        np.sort(Vector3),
+        np.arange(1, len(Vector3) + 1) / float(len(Vector3)),
+        linestyle="--",
+        label=label1 + " ENPV",
+        linewidth=2,
+        color="green",
+        alpha=0.7,
+    )
+    mean2 = np.mean(Vector2)
+    Vector4 = np.full_like(Vector2, mean2)
+    ax.plot(
+        np.sort(Vector4),
+        np.arange(1, len(Vector4) + 1) / float(len(Vector4)),
+        linestyle="-.",
+        label=label2 + " ENPV",
+        linewidth=2,
+        color="blue",
+        alpha=0.7,
+    )
+    ax.axhline(
+        0.9,
+        color="orange",
+        linestyle="--",
+        label="90th Percentile",
+    )
+
+    ax.axhline(
+        0.1,
+        color="red",
+        linestyle="-.",
+        label="10th Percentile",
+    )
+
+    # Add crosshair at the specified point
+    ax.plot(percentile_90a, 0.9, marker="X", color="black", markersize=6)
+    ax.plot(percentile_10a, 0.1, marker="X", color="black", markersize=6)
+    ax.plot(percentile_90b, 0.9, marker="X", color="black", markersize=6)
+    ax.plot(percentile_10b, 0.1, marker="X", color="black", markersize=6)
+
+    ax.grid(True)
+    ax.set_title("Cumulative Distribution Function (CDF)")
+    ax.set_xlabel("NPVs")
+    ax.set_ylabel("Cumulative Probability [%]")
+    ax.legend()
+    plt.show()
+    percentiles = [percentile_10a, percentile_90a, percentile_10b, percentile_90b]
+    return percentiles
 
 
 ##########################################################################################
@@ -1812,102 +1913,3 @@ def Optimization_parameters(Param, n):
 #             max_cond = condition
 
 #     return max_enpv, max_theta, max_cond
-
-
-def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
-    """
-    This function is Plotting the Cumulative Density Function of the NPVs
-    Args:
-        Vector1 (ndarray): Input Vector 1
-        Vector2 (ndarray): Input Vector 2
-        label1 (str): First CDF Curve
-        label2 (str): Second CDF Curve
-        label3 (str): First ENPV Value
-        label4 (str): Second ENPV Value
-
-    Returns:
-        Plot of all input Vectors in a CDF Graphic
-        + Visualisation of the 10th, 90th Percentile of the Input Vectors
-
-    To call this Function use following syntax:
-        CDF_Plot(Vector1, Vector2, label1, label2, label3, label4)
-    """
-    percentile_10a = np.percentile(Vector1, 10)
-    percentile_90a = np.percentile(Vector1, 90)
-    percentile_10b = np.percentile(Vector2, 10)
-    percentile_90b = np.percentile(Vector2, 90)
-
-    # Creating a subplot
-    fig, ax = plt.subplots()
-
-    # Step plot code with specific values
-    ax.plot(
-        np.sort(Vector1),
-        np.arange(1, len(Vector1) + 1) / float(len(Vector1)),
-        linestyle="-",
-        label=label1 + " CDF Curve",
-        linewidth=2,
-        color="green",
-        alpha=0.7,
-    )
-
-    ax.plot(
-        np.sort(Vector2),
-        np.arange(1, len(Vector2) + 1) / float(len(Vector2)),
-        linestyle="-",
-        label=label2 + " CDF Curve",
-        linewidth=2,
-        color="blue",
-        alpha=0.7,
-    )
-
-    mean1 = np.mean(Vector1)
-    Vector3 = np.full_like(Vector1, mean1)
-    ax.plot(
-        np.sort(Vector3),
-        np.arange(1, len(Vector3) + 1) / float(len(Vector3)),
-        linestyle="--",
-        label=label1 + " ENPV",
-        linewidth=2,
-        color="green",
-        alpha=0.7,
-    )
-    mean2 = np.mean(Vector2)
-    Vector4 = np.full_like(Vector2, mean2)
-    ax.plot(
-        np.sort(Vector4),
-        np.arange(1, len(Vector4) + 1) / float(len(Vector4)),
-        linestyle="-.",
-        label=label2 + " ENPV",
-        linewidth=2,
-        color="blue",
-        alpha=0.7,
-    )
-    ax.axhline(
-        0.9,
-        color="orange",
-        linestyle="--",
-        label="90th Percentile",
-    )
-
-    ax.axhline(
-        0.1,
-        color="red",
-        linestyle="-.",
-        label="10th Percentile",
-    )
-
-    # Add crosshair at the specified point
-    ax.plot(percentile_90a, 0.9, marker="X", color="black", markersize=6)
-    ax.plot(percentile_10a, 0.1, marker="X", color="black", markersize=6)
-    ax.plot(percentile_90b, 0.9, marker="X", color="black", markersize=6)
-    ax.plot(percentile_10b, 0.1, marker="X", color="black", markersize=6)
-
-    ax.grid(True)
-    ax.set_title("Cumulative Distribution Function (CDF)")
-    ax.set_xlabel("NPVs")
-    ax.set_ylabel("Cumulative Probability [%]")
-    ax.legend()
-    plt.show()
-    percentiles = [percentile_10a, percentile_90a, percentile_10b, percentile_90b]
-    return percentiles
