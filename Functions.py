@@ -273,6 +273,69 @@ def DHL_Calculation(Param, Scenario):
     return DHL
 
 
+def ATM_yearly(Param, Scenario):
+    """
+    This function calculates the Demand per year based on the Demand Hour Load (DHL) given the Demand Hour Factors with its corresponding limits.
+    Lowerlimit set to 0 ATMs, accoridng to the litaerature it should start at approximately 2 ATMs in the DHL which corresponds to 0.05 Mil Pax.
+    To adjust it, change first index lower boundary from limit_0 to limit_00 or adjust the first DHL_Limit from 0 to 0.5
+
+    Parameters:
+        Param (dict): Parameter Dictionary
+        Scenario (ndarray): DHL ATM Demand Scenario Matrix
+
+    Returns:
+        DHL_yearly (ndarray): Yearly ATMs
+
+    To call the function use following syntax:
+        ATM_yearly(Param, Scenario)
+    """
+    # Parameters
+    Mix = Param["Mix"]
+    Pax_capacity = Param["Pax_capacity"]
+    Average_Pax_capacity = np.round(np.sum(Mix * Pax_capacity), 0)
+    DHL_L = Param["DHL_Limits"] * 1000000
+    DHL_F = Param["DHL_Factors"] / 100
+
+    if Scenario.ndim == 2:
+        Scenario = Scenario
+    elif Scenario.ndim == 3:
+        Scenario = np.sum(Scenario, axis=2)
+    else:
+        raise ValueError("Scenario must be a 2D or 3D array.")
+
+    # 0.05 Mil Pax ~ 2-4  ATM
+    limit_0 = np.round((DHL_L[0] * DHL_F[0]) / Average_Pax_capacity, 0)
+    limit_00 = np.round((0.5 / 100 * DHL_F[0]) / Average_Pax_capacity, 0)
+
+    # 1 Mil Pax ~ 3-4 ATM
+    limit_1 = np.round((DHL_L[1] * DHL_F[0]) / Average_Pax_capacity, 0)
+    limit_01 = np.round((DHL_L[1] * DHL_F[1]) / Average_Pax_capacity, 0)
+
+    # 10 Mil Pax ~27-31 ATM
+    limit_10 = np.round((DHL_L[2] * DHL_F[1]) / Average_Pax_capacity, 0)
+    limit_010 = np.round((DHL_L[2] * DHL_F[2]) / Average_Pax_capacity, 0)
+
+    # 20 Mil Pax ~ 47-55ATM
+    limit_20 = np.round((DHL_L[3] * DHL_F[2]) / Average_Pax_capacity, 0)
+    limit_020 = np.round((DHL_L[3] * DHL_F[3]) / Average_Pax_capacity, 0)
+
+    # Create the index matrix with 1s where the condition is met, else 0
+    index_1 = ((Scenario >= limit_0) & (Scenario < limit_1)).astype(int) / DHL_F[0]
+    index_2 = ((Scenario >= limit_01) & (Scenario < limit_10)).astype(int) / DHL_F[1]
+    index_3 = ((Scenario >= limit_010) & (Scenario < limit_20)).astype(int) / DHL_F[2]
+    index_4 = (Scenario >= limit_020).astype(int) / DHL_F[3]
+
+    # Sum the index matrices to get the final index matrix
+    index_matrix = sum([index_1, index_2, index_3, index_4])
+
+    # Calculate the DHL by multiplying the Scenarios with the index matrix
+    DHL_yearly = Scenario * index_matrix
+
+    DHL_yearly_mix = DHL_yearly[:, :, np.newaxis] * Mix
+
+    return np.round(DHL_yearly, 0), np.round(DHL_yearly_mix, 0)
+
+
 def Model(t, D0, mu, sigma):
     """
     In this function the model for the approximation of the demand, Load factor and more is defined and returned.
@@ -704,9 +767,18 @@ def LH2_technology_adoption(Param, S_values, ATM_matrix):
     To call the function use following syntax:
         LH2_technology_adoption(Param, S_values, ATM_matrix)
     """
+    # Parameters
     Mix = Param["Mix"]  # Aircraft Mix
+
+    if ATM_matrix.ndim == 2:
+        ATM_matrix = ATM_matrix
+    elif ATM_matrix.ndim == 3:
+        ATM_matrix = np.sum(ATM_matrix, axis=2)
+    else:
+        raise ValueError("ATM_matrix must be either 2D or 3D.")
+
     # Calcualtion of the LH2 technology adoption
-    LH2_adoption = np.round(ATM_matrix[0] * S_values, 0)
+    LH2_adoption = np.round(ATM_matrix * S_values, 0)
 
     # Calculation of the LH2 mix adoption
     LH2_mix_adoption = np.round(LH2_adoption[:, :, np.newaxis] * Mix, 0)
