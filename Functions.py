@@ -336,6 +336,34 @@ def ATM_yearly(Param, Scenario):
     return np.round(DHL_yearly, 0), np.round(DHL_yearly_mix, 0)
 
 
+def K_yearly(Param, Capacity):
+    """
+    This function calculates the yearly capacity based on the given parameters and capacity matrix.
+
+     Args:
+         Param (dict): Parameter dictionary containing relevant data.
+         Capacity (ndarray): Capacity matrix to be processed.
+
+     Returns:
+         K_yearly (ndarray): Yearly capacity values.
+    """
+    # Parameters
+    Mix = Param["Mix"]
+
+    if Capacity.ndim == 2:
+        Capacity = Capacity
+    elif Capacity.ndim == 3:
+        Capacity = np.sum(Capacity, axis=2)
+    else:
+        raise ValueError("Capacity must be a 2D or 3D array.")
+
+    # Calculate yearly capacity
+    K_yearly = Capacity / (0.03 / 100)
+    K_yearly_mix = K_yearly[:, :, np.newaxis] * Mix
+
+    return K_yearly, K_yearly_mix
+
+
 def Model(t, D0, mu, sigma):
     """
     In this function the model for the approximation of the demand, Load factor and more is defined and returned.
@@ -1027,6 +1055,25 @@ def Opex_Jet(Param, K_Jet, D_Jet):
     else:
         raise ValueError("D_Jet has neiter shape 1D, 2D or 3D")
 
+    d_Jet, d_Jet_mix = ATM_yearly(Param, D_Jet)
+    k_Jet, k_Jet_mix = K_yearly(Param, K_Jet)
+
+    # If condition to adjust k_Jet shape
+    if k_Jet.ndim == 2:
+        k_Jet = k_Jet
+    elif k_Jet.ndim == 3:
+        k_Jet = np.sum(k_Jet, axis=2)
+    else:
+        raise ValueError("k_Jet has neiter shape 2D or 3D")
+
+    # If condition to adjust d_Jet shape
+    if d_Jet.ndim == 2:
+        d_Jet = d_Jet
+    elif d_Jet.ndim == 3:
+        d_Jet = np.sum(d_Jet, axis=2)
+    else:
+        raise ValueError("d_Jet has neiter shape 2D or 3D")
+
     # Calculating the difference matrix capacity minus demand
     diff = K_Jet - D_Jet
 
@@ -1037,12 +1084,12 @@ def Opex_Jet(Param, K_Jet, D_Jet):
     # Calculate the operational expenditure based on the demand and capacity
     # K_Jet > D_Jet
     CO_Jet_greater = greater * (
-        D_Jet * (p_Dock * CE_Dock_Jet + (1 - p_Dock) * CE_Open_Jet)
+        d_Jet * (p_Dock * CE_Dock_Jet + (1 - p_Dock) * CE_Open_Jet)
         + (K_Jet - D_Jet) * CM_Over_Jet
     )
     # K_Jet <= D_Jet
     CO_Jet_less_equal = less_equal * (
-        K_Jet * (p_Dock * CE_Dock_Jet + (1 - p_Dock) * CE_Open_Jet)
+        k_Jet * (p_Dock * CE_Dock_Jet + (1 - p_Dock) * CE_Open_Jet)
         + (D_Jet - K_Jet) * CM_Under_Jet
     )
 
@@ -1093,6 +1140,25 @@ def Opex_LH(Param, K_LH, D_LH):
     else:
         raise ValueError("D_LH has neiter shape 1D, 2D or 3D")
 
+    d_LH, d_LH_mix = ATM_yearly(Param, D_LH)
+    k_LH, k_LH_mix = K_yearly(Param, K_LH)
+
+    # If condition to adjust k_Jet shape
+    if k_LH.ndim == 2:
+        k_LH = k_LH
+    elif k_LH.ndim == 3:
+        k_LH = np.sum(k_LH, axis=2)
+    else:
+        raise ValueError("k_Jet has neiter shape 2D or 3D")
+
+    # If condition to adjust d_Jet shape
+    if d_LH.ndim == 2:
+        d_LH = d_LH
+    elif d_LH.ndim == 3:
+        d_LH = np.sum(d_LH, axis=2)
+    else:
+        raise ValueError("d_Jet has neiter shape 2D or 3D")
+
     # Calculating the difference matrix capacity minus demand
     diff = K_LH - D_LH
 
@@ -1103,12 +1169,12 @@ def Opex_LH(Param, K_LH, D_LH):
     # Calculate the operational expenditure based on the demand and capacity
     # K_LH > D_LH
     CO_LH_greater = greater * (
-        D_LH * (p_Dock * CE_Dock_LH + (1 - p_Dock) * CE_Open_LH)
+        d_LH * (p_Dock * CE_Dock_LH + (1 - p_Dock) * CE_Open_LH)
         + (K_LH - D_LH) * CM_Over_LH
     )
     # K_LH <= D_LH
     CO_LH_less_equal = less_equal * (
-        K_LH * (p_Dock * CE_Dock_LH + (1 - p_Dock) * CE_Open_LH)
+        k_LH * (p_Dock * CE_Dock_LH + (1 - p_Dock) * CE_Open_LH)
         + (D_LH - K_LH) * CM_Under_LH
     )
     # Combine the two conditions to get the final operational expenditure
@@ -1217,6 +1283,25 @@ def Revenue_Jet(Param, K_Jet, D_Jet):
     else:
         raise ValueError("D_Jet has neiter shape 2D or 3D")
 
+    k_Jet, k_Jet_mix = K_yearly(Param, K_Jet)
+    d_Jet, d_Jet_mix = ATM_yearly(Param, D_Jet)
+
+    # If condition to adjust K_Jet shape
+    if k_Jet.ndim == 2:
+        k_Jet = k_Jet
+    elif k_Jet.ndim == 3:
+        k_Jet = np.sum(k_Jet, axis=2)
+    else:
+        raise ValueError("k_Jet has neiter shape 2D or 3D")
+
+    # If condition to adjust D_Jet shape
+    if d_Jet.ndim == 2:
+        d_Jet = d_Jet
+    elif d_Jet.ndim == 3:
+        d_Jet = np.sum(d_Jet, axis=2)
+    else:
+        raise ValueError("d_Jet has neiter shape 2D or 3D")
+
     # Calculating the difference matrix
     diff = K_Jet - D_Jet
 
@@ -1227,11 +1312,11 @@ def Revenue_Jet(Param, K_Jet, D_Jet):
     # Calculate the operational expenditure based on the demand and capacity
     # K_Jet > D_Jet
     R_Jet_greater = (
-        greater * D_Jet * (p_dock * re_Dock_Jet) + (1 - p_dock) * re_Open_Jet + rf_Jet
+        greater * d_Jet * (p_dock * re_Dock_Jet) + (1 - p_dock) * re_Open_Jet + rf_Jet
     )
     # K_Jet <= D_Jet
     R_Jet_less_equal = (
-        less_equal * K_Jet * (p_dock * re_Dock_Jet)
+        less_equal * k_Jet * (p_dock * re_Dock_Jet)
         + (1 - p_dock) * re_Open_Jet
         + rf_Jet
     )
@@ -1279,6 +1364,25 @@ def Revenue_LH(Param, K_LH, D_LH):
     else:
         raise ValueError("K_LH has neiter shape 2D or 3D")
 
+    d_LH, d_LH_mix = ATM_yearly(Param, D_LH)
+    k_LH, k_LH_mix = K_yearly(Param, K_LH)
+
+    # If condition to adjust k_Jet shape
+    if k_LH.ndim == 2:
+        k_LH = k_LH
+    elif k_LH.ndim == 3:
+        k_LH = np.sum(k_LH, axis=2)
+    else:
+        raise ValueError("k_Jet has neiter shape 2D or 3D")
+
+    # If condition to adjust d_Jet shape
+    if d_LH.ndim == 2:
+        d_LH = d_LH
+    elif d_LH.ndim == 3:
+        d_LH = np.sum(d_LH, axis=2)
+    else:
+        raise ValueError("d_Jet has neiter shape 2D or 3D")
+
     # Calculating the difference matrix
     diff = K_LH - D_LH
 
@@ -1289,11 +1393,11 @@ def Revenue_LH(Param, K_LH, D_LH):
     # Calculate the operational expenditure based on the demand and capacity
     # K_LH > D_LH
     R_LH_greater = (
-        greater * D_LH * (p_dock * re_Dock_LH) + (1 - p_dock) * re_Open_LH + rf_LH
+        greater * d_LH * (p_dock * re_Dock_LH) + (1 - p_dock) * re_Open_LH + rf_LH
     )
     # K_LH <= D_LH
     R_LH_less_equal = (
-        less_equal * K_LH * (p_dock * re_Dock_LH) + (1 - p_dock) * re_Open_LH + rf_LH
+        less_equal * k_LH * (p_dock * re_Dock_LH) + (1 - p_dock) * re_Open_LH + rf_LH
     )
     # Combine the two conditions to get the final operational expenditure
     R_LH = np.round(R_LH_greater + R_LH_less_equal, 2)
@@ -1433,6 +1537,11 @@ def NPV_calculation(Param, delta_K_Jet, delta_K_LH, ATM, S_value_matrix, PAX):
         D_LH = np.round(ATM * S_value_matrix[:, :, np.newaxis], 0)
     K_Jet = Capacity_3D(Param, delta_K_Jet_Matrix)  # Jet A1 aircraft stand capacity
     K_LH = Capacity_3D(Param, delta_K_LH_Matrix, True)  # LH2 aircraft stand capacity
+
+    k_Jet, k_Jet_mix = K_yearly(Param, K_Jet)
+    k_LH, k_LH_mix = K_yearly(Param, K_LH)
+    d_Jet, d_Jet_mix = ATM_yearly(Param, D_Jet)
+    d_LH, d_LH_mix = ATM_yearly(Param, D_LH)
 
     Cost = Total_Cost_calculation(
         Param, delta_K_Jet, delta_K_LH, K_Jet, K_LH, D_Jet, D_LH, PAX
