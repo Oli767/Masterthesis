@@ -1829,20 +1829,10 @@ def Decision_Rule(Param, K0, d, theta, condition):
     return delta_K_Flex
 
 
-def Optimization_parameters(Param, n):
+def Parameter_combinations(Param, n=1000):
     """
-    This function creates a list of tuples consisiting of each pair of theta and
-    condition, it reduces the list to a random sample of size n
-
-    Args:
-        Param (dict): Parameter Dictionary
-        n (int): Sample Size
-
-    Returns:
-        optimization_params (list of tuples): List of Theta and Condition Tuple Pairs
-
-    To call this function use the following syntax:
-        Optimization(Param, n)
+    Generate all combinations of parameters within specified ranges.
+    Returns a list of tuples, each containing a unique combination of parameters.
     """
     # Theta
     lower_theta = Param["lower_theta"]
@@ -1854,17 +1844,58 @@ def Optimization_parameters(Param, n):
     upper_cond = Param["upper_condition"]
     stepsize_cond = Param["stepsize_condition"]
 
-    # Creation of a List of Tuples
-    condition = np.arange(lower_cond, upper_cond, stepsize_cond)
-    theta = np.arange(lower_theta, upper_theta, stepsize_theta)
-    optimization_params = list(itertools.product(theta, condition))
+    #   Define integer ranges for each variable (inclusive)
+    theta_Jet = np.arange(lower_theta, upper_theta + stepsize_theta, stepsize_theta)
+    condition_Jet = np.arange(lower_cond, upper_cond + stepsize_cond, stepsize_cond)
+    # LH2
+    theta_LH = np.arange(lower_theta, upper_theta + stepsize_theta, stepsize_theta)
+    condition_LH = np.arange(lower_cond, upper_cond + stepsize_cond, stepsize_cond)
 
-    indices = np.random.choice(
-        len(optimization_params), size=(min(n, len(optimization_params))), replace=False
+    # Generate all possible combinations
+    all_combinations = list(
+        itertools.product(
+            theta_Jet,
+            condition_Jet,
+            theta_LH,
+            condition_LH,
+        )
     )
-    optimization_params_sample = [optimization_params[i] for i in indices]
+    sample_size = n
+    if sample_size > len(all_combinations):
+        raise ValueError("Sample size exceeds the number of available combinations.")
+    sampled_combinations = random.sample(all_combinations, sample_size)
 
-    return optimization_params_sample
+    return sampled_combinations  # all_combinations
+
+
+def Parameter_Evaluation(
+    Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly, n=1000
+):
+    """
+    Evaluate the parameters and return the results.
+    """
+    Optimization_parameters = Parameter_combinations(Param, n)
+    max_enpv = -np.inf
+    best_params = None
+    for sample in Optimization_parameters:
+        delta_K_Jet = Decision_Rule(Param, Param["K0"], d_ATM_Jet, sample[0], sample[1])
+        delta_K_LH = Decision_Rule(
+            Param, Param["K0_LH"], d_ATM_LH, sample[2], sample[3]
+        )
+
+        ENPV = ENPV_calculation(
+            Param,
+            delta_K_Jet,
+            delta_K_LH,
+            d_ATM_mix,
+            S_values,
+            PAX_yearly,
+        )
+        if ENPV > max_enpv:
+            max_enpv = ENPV
+            best_params = sample
+
+    return max_enpv, best_params
 
 
 def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
