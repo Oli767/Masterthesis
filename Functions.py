@@ -1421,7 +1421,7 @@ def Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
     return R_LH
 
 
-def Reveneue_Pax(Param, PAX_yearly, K_Yearly, D_Yearly):
+def Revenue_Pax(Param, PAX_yearly, K_Yearly, D_Yearly):
     """
     This function calculates the operating revenues from the terminal based on Passenger numbers.
 
@@ -1437,18 +1437,19 @@ def Reveneue_Pax(Param, PAX_yearly, K_Yearly, D_Yearly):
     """
     # Parameters
     re_Pax = Param["re_Pax"]  # Revenue per passenger within the terminal in USD
-    condition = Param["condition"]  # Condition for the difference matrix
-    diff = K_Yearly - D_Yearly
+    # condition = Param["condition"]  # Condition for the difference matrix
+    # diff = K_Yearly - D_Yearly
 
-    Reduction = -diff / D_Yearly
+    # Reduction = -diff / D_Yearly
 
-    greater = np.greater(diff, condition).astype(int)
-    less_equal = np.less_equal(diff, condition).astype(int)
-    # Calculate the total revenue from passengers
-    R_Pax_greater = greater * PAX_yearly * re_Pax
-    R_Pax_less_equal = less_equal * PAX_yearly * Reduction * re_Pax
+    # greater = np.greater(diff, condition).astype(int)
+    # less_equal = np.less_equal(diff, condition).astype(int)
+    # # Calculate the total revenue from passengers
+    # R_Pax_greater = greater * PAX_yearly * re_Pax
+    # R_Pax_less_equal = less_equal * PAX_yearly * Reduction * re_Pax
 
-    R_Pax = np.round(R_Pax_greater + R_Pax_less_equal, 0)
+    # R_Pax = np.round(R_Pax_greater + R_Pax_less_equal, 0)
+    R_Pax = PAX_yearly * re_Pax
     return R_Pax
 
 
@@ -1536,7 +1537,7 @@ def Total_Revenue_calculation(
     # Calculate the revenue from passengers
     K = K_Jet_yearly + K_LH_yearly  # Total capacity in the DHL
     D = D_Jet_yearly + D_LH_yearly  # Total demand in
-    R_Pax = Reveneue_Pax(Param, PAX_yearly, K, D)
+    R_Pax = Revenue_Pax(Param, PAX_yearly, K, D)
 
     # Calculate the revenue from renting
     R_Rent = Revenue_Rent(Param, k_Jet, k_LH)
