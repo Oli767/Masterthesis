@@ -1874,7 +1874,8 @@ def Parameter_combinations(Param, n=1000):
     )
     sample_size = n
     if sample_size > len(all_combinations):
-        raise ValueError("Sample size exceeds the number of available combinations.")
+        n = len(all_combinations)
+        # raise ValueError("Sample size exceeds the number of available combinations.")
     sampled_combinations = random.sample(all_combinations, sample_size)
 
     return sampled_combinations  # all_combinations
