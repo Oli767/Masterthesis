@@ -1872,13 +1872,103 @@ def Parameter_combinations(Param, n=1000):
             condition_LH,
         )
     )
-    sample_size = n
-    if sample_size > len(all_combinations):
-        n = len(all_combinations)
-        # raise ValueError("Sample size exceeds the number of available combinations.")
+    sample_size = min(n, len(all_combinations))
+    # if sample_size > len(all_combinations):
+    #     n = len(all_combinations)
+    #     # raise ValueError("Sample size exceeds the number of available combinations.")
     sampled_combinations = random.sample(all_combinations, sample_size)
 
     return sampled_combinations  # all_combinations
+
+
+def Parameter_combinations2(Param, n=10000):
+    """
+    Generate n random combinations of parameters from specified ranges.
+    Returns a list of tuples with each combination.
+    """
+
+    def build_range(lower, upper, step):
+        return np.arange(lower, upper + step, step)
+
+    # Define ranges
+    theta_Jet = build_range(
+        Param["lower_theta"], Param["upper_theta"], Param["stepsize_theta"]
+    )
+    condition_Jet = build_range(
+        Param["lower_condition"], Param["upper_condition"], Param["stepsize_condition"]
+    )
+    theta_LH = theta_Jet
+    condition_LH = condition_Jet
+
+    # Sample n random combinations without building full Cartesian product
+    combinations = []
+    for _ in range(n):
+        combo = (
+            random.choice(theta_Jet),
+            random.choice(condition_Jet),  # Jet short
+            random.choice(theta_Jet),
+            random.choice(condition_Jet),  # Jet medium
+            random.choice(theta_Jet),
+            random.choice(condition_Jet),  # Jet long
+            random.choice(theta_LH),
+            random.choice(condition_LH),  # LH short
+            random.choice(theta_LH),
+            random.choice(condition_LH),  # LH medium
+            random.choice(theta_LH),
+            random.choice(condition_LH),  # LH long
+        )
+        combinations.append(combo)
+
+    return combinations
+
+
+def Parameter_Evaluation2(
+    Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly, n=1000
+):
+    """
+    Evaluate the parameters and return the results.
+    """
+    Optimization_parameters = Parameter_combinations2(Param, n)
+    max_enpv = -np.inf
+    best_params = None
+    for sample in Optimization_parameters:
+        delta_K_Jet_short = Decision_Rule(
+            Param, Param["K0"], d_ATM_Jet[:, :, 0], sample[0], sample[1]
+        )
+        delta_K_Jet_medium = Decision_Rule(
+            Param, Param["K0"], d_ATM_Jet[:, :, 1], sample[2], sample[3]
+        )
+        delta_K_Jet_long = Decision_Rule(
+            Param, Param["K0"], d_ATM_Jet[:, :, 2], sample[4], sample[5]
+        )
+        delta_K_Jet = np.stack(
+            [delta_K_Jet_short, delta_K_Jet_medium, delta_K_Jet_long], axis=2
+        )
+        delta_K_LH_short = Decision_Rule(
+            Param, Param["K0_LH"], d_ATM_LH[:, :, 0], sample[6], sample[7]
+        )
+        delta_K_LH_medium = Decision_Rule(
+            Param, Param["K0_LH"], d_ATM_LH[:, :, 1], sample[8], sample[9]
+        )
+        delta_K_LH_long = Decision_Rule(
+            Param, Param["K0_LH"], d_ATM_LH[:, :, 2], sample[10], sample[11]
+        )
+        delta_K_LH = np.stack(
+            [delta_K_LH_short, delta_K_LH_medium, delta_K_LH_long], axis=2
+        )
+        ENPV = ENPV_calculation(
+            Param,
+            delta_K_Jet,
+            delta_K_LH,
+            d_ATM_mix,
+            S_values,
+            PAX_yearly,
+        )
+        if ENPV > max_enpv:
+            max_enpv = ENPV
+            best_params = sample
+
+    return max_enpv, best_params
 
 
 def Parameter_Evaluation(
