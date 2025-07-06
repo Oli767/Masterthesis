@@ -59,7 +59,7 @@ def Scenario_plot(
     horizon vector Fth, allowing visualization of a selected number (n) of plots.
 
     Parameters:
-        Param (dict): Dictionary
+        Param (dict): Parameter Dictionary
         Scenarios (ndarray): Scenario (Plotting) Data.
         NoStep (bool): If True, uses a line plot; otherwise, a step plot.
         Title (str): Title for the plot.
@@ -182,10 +182,10 @@ def Shock_vector(Param, Forecast_vector):
     shock_drop_scale = Param["shock_drop_scale"]
     recovery_steepness = Param["recovery_steepness"]
 
-    # --- Independent Randomness for Each Vector ---
+    #  Independent Randomness for Each Vector
     rng = np.random.default_rng()  # Using independent RNG for randomness per vector
 
-    # --- Duration Calculations ---
+    # Shock duration calculations
     duration_shock = min(
         max(int(rng.exponential(scale=shock_time_scale) + 1), 2), int(Param["Fth"] / 2)
     )  # Randomized shock duration
@@ -200,7 +200,7 @@ def Shock_vector(Param, Forecast_vector):
         ),
         Param["Fth"] - duration_shock,
     )
-    # Randomized recovery
+    # Randomized shock recovery
     duration_combined = duration_shock + duration_recovery
     duration = min(Param["Fth"], duration_combined)
 
@@ -208,11 +208,11 @@ def Shock_vector(Param, Forecast_vector):
     max_start_index = len(Forecast_vector) - duration
     start_index = rng.integers(0, max_start_index)
 
-    # --- Shock and Recovery Parameters ---
+    # Shock and recovery parameters
     D0 = Forecast_vector[start_index]  # Initial demand value before shock
     target = Forecast_vector[start_index + duration]  # Target demand after recovery
 
-    # --- Shock Calculation ---
+    # Shock calculation
     shock_drop = Param["Dt0"] * (shock_drop_scale / 100)
     delta_demand = max(
         -rng.exponential(scale=shock_drop), -D0
@@ -222,12 +222,12 @@ def Shock_vector(Param, Forecast_vector):
     raw_splits = np.append(raw_splits, 1)
     shock_vector = D0 + delta_demand * raw_splits
 
-    # --- Recovery Calculation ---
+    # Recovery calculation
     k = abs(rng.normal(loc=recovery_steepness, scale=0.1))  # Random recovery rate
     t = np.arange(1, duration_recovery)
     recovery_vector = target - (target - D0) * np.exp(-k * t)
 
-    # --- Combine Shock and Recovery ---
+    # Combine shock and recovery
     combined_vector = np.round(np.concatenate((shock_vector, recovery_vector)), 2)
     Forecast_vector[start_index : start_index + duration] = combined_vector
 
@@ -236,17 +236,17 @@ def Shock_vector(Param, Forecast_vector):
 
 def DHL_Calculation(Param, Scenario):
     """
-    The DHL function calculates the Demand Hour Load (DHL) based on the given Secnario the Demand Hour Factors with its corresponding limits.
+    The DHL function calculates the Demand Hour Load (DHL) based on the given Scenario the Demand Hour Factors with its corresponding limits.
 
     Parameters:
         Param (dict): Parameter Dictionary
-        Scenario (ndarray): Passenger Demand Scenario Matrix
+        Scenario (ndarray): Passenger Demand in the DHL Scenario Matrix
 
     Returns:
-        DHL (ndarray): Demand Hour Load Passenger Matrix
+        DHL (ndarray): Demand Hour Load Passenger Scenario Matrix
 
     To call the function use following syntax:
-        DHL(Param, Scenario, DHL_Limits, DHL_Factors)
+        DHL(Param, Scenario)
     """
     # Parameters
     DHL_L = Param["DHL_Limits"] * 1000000
@@ -282,7 +282,7 @@ def ATM_yearly(Param, Scenario):
 
     Parameters:
         Param (dict): Parameter Dictionary
-        Scenario (ndarray): DHL ATM Demand Scenario Matrix
+        Scenario (ndarray): ATM Demand in the DHL Scenario Matrix
 
     Returns:
         DHL_yearly (ndarray): Yearly ATMs
@@ -297,6 +297,7 @@ def ATM_yearly(Param, Scenario):
     DHL_L = Param["DHL_Limits"] * 1000000
     DHL_F = Param["DHL_Factors"] / 100
 
+    # Check dimensions of Scenario
     if Scenario.ndim == 2:
         Scenario = Scenario
     elif Scenario.ndim == 3:
@@ -341,7 +342,7 @@ def K_yearly(Param, Capacity):
     """
     This function calculates the yearly capacity based on the given parameters and capacity matrix.
 
-     Args:
+     Parameters:
          Param (dict): Parameter dictionary containing relevant data.
          Capacity (ndarray): Capacity matrix to be processed.
 
@@ -351,6 +352,7 @@ def K_yearly(Param, Capacity):
     # Parameters
     Mix = Param["Mix"]
 
+    # Check dimensions of Capacity
     if Capacity.ndim == 2:
         Capacity = Capacity
     elif Capacity.ndim == 3:
@@ -462,13 +464,12 @@ def trend_approximation(Param, CurveParameters, Adjust_mu=False):
         Param (dict): Dictionary
         CurveParameters (ndarray): Inital value a, growth rate mu, and volatility sigma
         Adjust_mu (Bool): Condition whether to subtract Adjust_mu_factor from mu
-        Adjust_mu_factor (float): adjustment amount for mu if Adjust_mu is enabled (True)
 
     Returns:
         trend (ndarray): approximation trend for the demand, load factor or any other dependent value accoridngt to the model function.
 
     To call the function use following syntax:
-        trend_approximation(Param, CurveParameters, Adjust_mu=True, Adjust_mu_factor=0.002)
+        trend_approximation(Param, CurveParameters, Adjust_mu=True)
     """
     # Parameters
     time = Param["time"]
@@ -504,13 +505,12 @@ def Load_Factor_matrix(Param, Scenario):
     Parameters:
         Param (dict): Paremter dictionary
         Scenario (ndarray): Passenger Demand Scenario Matrix
-        LF (float): Initial Loadfactor
 
     Returns:
         smoothed_Load_Factor (ndarray): Smoothed Load Factor matrix
 
     To call the function use following syntax:
-        Load_Factor_matrix(Param, Scenario, LF)
+        Load_Factor_matrix(Param, Scenario)
     """
     # Initial Loadfactor
     LF = Param["LF"]
@@ -588,7 +588,7 @@ def ATM_plot(ATM_Fleet, Param):
     horizon vector Fth, it allows to shows only a selected number (No_Forecasts_plot) of plots
 
     Parameters:
-        ATM_Fleet: ATM Szenario
+        ATM_Fleet: ATM Szenario Matrix
         Param (dict): Parameter Dictionary
 
     Returns:
@@ -663,7 +663,7 @@ def exponential_matrix(Param):
         Param (dict): Parameter Dictionary
 
     Returns:
-        matrix (ndarray): step matrix
+        matrix (ndarray): Step Matrix
 
     To call the function use following syntax:
         exponential_matrix(Param)
@@ -709,7 +709,7 @@ def S_curve(Param):
         Param (dict): Parameter Dictionary
 
     Returns:
-        S_values_matrix (ndarray): S-Curve values matrix
+        S_values_matrix (ndarray): S-Curve values Matrix
 
     To call the function use following syntax:
         S_curve(Param)
@@ -742,7 +742,7 @@ def S_curve_plot(Param, S_Values):
 
     Parameters:
         Param (dict): Parameter Dictionary
-        S_Values (ndarray): S-Curve values matrix
+        S_Values (ndarray): S-Curve values Matrix
 
     Returns:
         Plot of the S-Curve and a random set of the S-Curve values
@@ -787,7 +787,7 @@ def LH2_technology_adoption(Param, S_values, ATM_matrix):
     Parameters:
         Param (dict): Parameter dictionary
         S_values (ndarray): S-curve values for technology adoption
-        ATM_matrix (ndarray): Air Traffic Movement matrix
+        ATM_matrix (ndarray): ATM Scenario Matrix
 
     Returns:
         LH2_adoption (ndarray): LH2 technology adoption values
@@ -824,9 +824,10 @@ def Capacity_2D(Param, delta_K, adjustK0=False):
     It returns the capacity either as a vector or as a matrix depending on the Matrix parameter.
     The capacity is calculated for each forecast time step, and if Matrix is True, it stacks the vector K vertically
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         delta_K (np.array): Capacity Change Vector
+        adjustK0 (bool): If True, adjusts K0 to K0_LH
 
     Returns:
         K (np.array): Capacity vectors in 2D shape
@@ -865,9 +866,10 @@ def Capacity_3D(Param, delta_K, adjustK0=False):
     It returns the capacity either as a vector or as a matrix depending on the Matrix parameter.
     The capacity is calculated for each forecast time step, and if Matrix is True, it stacks the vector K vertically
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         delta_K (np.array): Capacity Change Vector
+        adjustK0 (bool): If True, adjusts K0 to K0_LH
 
     Returns:
         K (np.array): Capacity vector or matrix depending on the Matrix parameter.
@@ -904,12 +906,12 @@ def Capex_Jet(Param, delta_K_Jet):
     """
     This function calculates the capital expenditure (Capex) for Jet A1 aircraft stands based on the change in capacity (delta_K).
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         delta_K_Jet (np.array): Capacity Change Vector
 
     Returns:
-        CI_Jet (np.array): Installation Cost for Jet A1 aircraft stands in USD
+        CI_Jet (np.array): Installation Cost for Jet A1 Aircraft Stands
 
     To call the function use following syntax:
         Capex_Jet(Param, delta_K_Jet)
@@ -940,10 +942,10 @@ def Capex_LH(Param, delta_K_LH, D_LH_yearly):
     """
     This function calculates the capital expenditure (Capex) for LH2 aircraft stands based on the change in capacity (delta_K).
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         delta_K_LH (np.array): Capacity Change Vector
-        D_LH (np.array): LH2 Aircraft Movement Demand per year
+        D_LH_yearly (np.array): LH2 Aircraft Movement Demand per year
 
     Returns:
         CI_LH (np.array): Installation Cost for LH2 aircraft stands in USD
@@ -1016,7 +1018,7 @@ def Opex_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
     """
     This function calculates the operating expenditure (Opex) for Jet A1 aircraft stands based on the stand capacity K and stand demand D.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         k_Jet (np.array): Stand Capacity Vector DHL
         d_Jet (np.array): Stand Demand Vector DHL
@@ -1101,7 +1103,7 @@ def Opex_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
     """
     This function calculates the operating expenditure (Opex) for LH2 aircraft stands based on the stand capacity K and stand demand D.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         k_LH (np.array): Stand Capacity Vector in the DHL
         d_LH (np.array): Stand Demand Vector in the DHL
@@ -1184,12 +1186,12 @@ def Opex_Terminal(Param, PAX_yearly):
     """
     This function calculates the operating expenditure (Opex) for terminal based on Passenger numbers.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
-        PAX (np.array): Number of Passengers per Year
+        PAX_yearly (np.array): Number of Passengers per Year
 
     Returns:
-        CO_Terminal (np.array): Operating for Jet A1 aircraft stands in USD
+        CO_Terminal (np.array): Operating for Jet A1 aircraft stands
 
     To call the function use following syntax:
         Opex_Terminal(Param, PAX_yearly)
@@ -1222,7 +1224,7 @@ def Total_Cost_calculation(
     This function calculates the cost of the airport infrastructure based on the capital expenditure (Capex) and
     operational expenditure (Opex) for Jet A1 and LH2 aircraft stands, as well as terminal operations.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         delta_K_Jet (np.array): Capacity Change Vector for Jet A1
         delta_K_LH (np.array): Capacity Change Vector for LH2
@@ -1237,10 +1239,11 @@ def Total_Cost_calculation(
         D_LH_yearly (np.array): Yearly LH2 Stand Demand
 
     Returns:
-        Total_Cost_calculation(Param, delta_K_Jet, delta_K_LH, k_Jet, k_LH, d_Jet, d_LH, PAX, K_Jet_yearly, K_LH_yearly, D_Jet_yearly, D_LH_yearly)
+        Total_cost (np.array): Total cost
 
     To call the function use following syntax:
-        Opex_Jet(Param, K_Jet, D_Jet)
+        Total_Cost_calculation(Param, delta_K_Jet, delta_K_LH, k_Jet, k_LH, d_Jet,
+        d_LH, PAX_yearly, K_Jet_yearly, K_LH_yearly, D_Jet_yearly, D_LH_yearly,)
     """
     # Installation Cost
     CI_Jet = Capex_Jet(Param, delta_K_Jet)
@@ -1261,7 +1264,7 @@ def Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
     """
     This function calculates the revenue from Jet A1 aircraft stand fees based on stand capacity K and stand demand D.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         k_Jet (np.array): Stand Capacity Vector in the DHL
         d_Jet (np.array): Stand Demand Vector in the DHL
@@ -1269,7 +1272,7 @@ def Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
         D_Jet_yearly (np.array): Yearly Jet A1 Stand Demand
 
     Returns:
-        R_Jet (np.array): Revenue from Jet A1 aircraft stands in USD
+        R_Jet (np.array): Revenue from Jet A1 aircraft stands
 
     To call the function use following syntax:
         Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly)
@@ -1343,7 +1346,7 @@ def Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
     """
     This function calculates the revenue from LH2 aircraft stand fees based on stand capacity K and stand demand D.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         k_LH (np.array): Stand Capacity Vector
         d_LH (np.array): Stand Demand Vector
@@ -1351,10 +1354,10 @@ def Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
         D_LH_yearly (np.array): Yearly LH2 Stand Demand
 
     Returns:
-        R_LH (np.array): Revenue from LH2 aircraft stands in USD
+        R_LH (np.array): Revenue from LH2 aircraft stands
 
     To call the function use following syntax:
-        Revenue_LH(Param, K_LH, D_LH)
+        Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly)
     """
     # Parameters
     p_dock = Param["p_Dock"]  # Probability of docking
@@ -1421,34 +1424,22 @@ def Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
     return R_LH
 
 
-def Revenue_Pax(Param, PAX_yearly, K_Yearly, D_Yearly):
+def Revenue_Pax(Param, PAX_yearly):
     """
     This function calculates the operating revenues from the terminal based on Passenger numbers.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         PAX_Yearly (np.array): Number of Passengers per Year
 
     Returns:
-        R_PAX (np.array): Operating revenue from passengers in USD
+        R_PAX (np.array): Operating revenue from passengers
 
     To call the function use following syntax:
         Reveneue_Pax(Param, PAX_yearly)
     """
     # Parameters
-    re_Pax = Param["re_Pax"]  # Revenue per passenger within the terminal in USD
-    # condition = Param["condition"]  # Condition for the difference matrix
-    # diff = K_Yearly - D_Yearly
-
-    # Reduction = -diff / D_Yearly
-
-    # greater = np.greater(diff, condition).astype(int)
-    # less_equal = np.less_equal(diff, condition).astype(int)
-    # # Calculate the total revenue from passengers
-    # R_Pax_greater = greater * PAX_yearly * re_Pax
-    # R_Pax_less_equal = less_equal * PAX_yearly * Reduction * re_Pax
-
-    # R_Pax = np.round(R_Pax_greater + R_Pax_less_equal, 0)
+    re_Pax = Param["re_Pax"]  # Revenue per passenger within the terminal
     R_Pax = PAX_yearly * re_Pax
     return R_Pax
 
@@ -1457,7 +1448,7 @@ def Revenue_Rent(Param, k_Jet, k_LH):
     """
     This function calculates the revenues from renting out spaces within the terminal.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         k_Jet (np.array): Total Capacity in the DHL for Jet A1
         k_LH (np.array): Total Capacity in the DHL for LH2
@@ -1469,9 +1460,7 @@ def Revenue_Rent(Param, k_Jet, k_LH):
         Reveneue_Rent(Param, K)
     """
     # Parameters
-    re_Rent = Param[
-        "re_Rent"
-    ]  # Revenue from renting spaces in USD per unit of capacity K
+    re_Rent = Param["re_Rent"]  # Revenue from renting spaces per unit of capacity K
 
     if k_Jet.ndim == 2:
         k_Jet = k_Jet
@@ -1509,7 +1498,7 @@ def Total_Revenue_calculation(
     This function calculates the total revenues from the airport infrastructure based on
     the Jet A1 and LH2 aircraft stand operation, as well as terminal and rental revenues.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         K (np.array): Total Capacity
         k_Jet (np.array): Stand Capacity Vector for Jet A1 in the DHL
@@ -1523,10 +1512,11 @@ def Total_Revenue_calculation(
         D_LH_yearly (np.array): Yearly LH2 Stand Demand
 
     Returns:
-        Total_revenue (np.array): Total revenue from the airport infrastructure in USD
+        Total_revenue (np.array): Total revenue from the airport infrastructure
 
     To call the function use following syntax:
-        Total_Revenue_calculation(Param, k_Jet, k_LH, d_Jet, d_LH, PAX_yearly, K_Jet_yearly, K_LH_yearly, D_Jet_yearly, D_LH_yearly)
+        Total_Revenue_calculation(Param, k_Jet, k_LH, d_Jet, d_LH, PAX_yearly,
+        K_Jet_yearly, K_LH_yearly, D_Jet_yearly, D_LH_yearly)
     """
     # Calculate the revenue for Jet A1
     R_Jet = Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly)
@@ -1535,9 +1525,7 @@ def Total_Revenue_calculation(
     R_LH = Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly)
 
     # Calculate the revenue from passengers
-    K = K_Jet_yearly + K_LH_yearly  # Total capacity in the DHL
-    D = D_Jet_yearly + D_LH_yearly  # Total demand in
-    R_Pax = Revenue_Pax(Param, PAX_yearly, K, D)
+    R_Pax = Revenue_Pax(Param, PAX_yearly)
 
     # Calculate the revenue from renting
     R_Rent = Revenue_Rent(Param, k_Jet, k_LH)
@@ -1553,15 +1541,15 @@ def NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
     This function calculates the Net Present Value (NPV) of the airport infrastructure project based on the
     capital expenditure (Capex), operational expenditure (Opex), and revenues from Jet A1 and LH2 aircraft stands, as well as terminal and rental revenues.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         delta_K (np.array): Capacity Change Vector
         d_ATM (np.array): Total Air Traffic Movements
         S_value_matrix (np.array): S-Curve Matrix for Technology Adoption
-        PAX (np.array): Number of Passengers per Year
+        PAX_yearly (np.array): Number of Passengers per Year
 
     Returns:
-        NPV (np.array): Net Present Value of the airport infrastructure project in USD
+        NPV (np.array): Net Present Value of the airport infrastructure project
 
     To call the function use following syntax:
         NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
@@ -1625,11 +1613,11 @@ def ENPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly
     """
     This function calculates the Expected Net Present Value (NPV) of the airport infrastructure project based on the Net Present Value (NPV) calculation for each scenario.
 
-    Args:
+    Parameters:
         Param (dict): Parameter Dictionary
         delta_K_Jet (np.array): Capacity Change Vector for Jet A1
         delta_K_LH (np.array): Capacity Change Vector for LH2
-        d_ATM (np.array): Total Air Traffic Movements in the DHL
+        d_ATM (np.array): ATMs in the DHL
         S_values (np.array): S-Curve Matrix for Technology Adoption
         PAX_yearly (np.array): Number of Passengers per Year
 
@@ -1665,7 +1653,7 @@ def GA_dual(Param, d_ATM, S_values, PAX_yearly):
     """
     This function evolves delta_K_Jet_Mix and delta_K_LH_Mix using a genetic algorithm to maximize ENPV.
 
-    Args:
+    Parameters:
         Param (dict): Parameter dictionary
         d_ATM (np.array): DHL ATMs
         S_values (np.array): S-curve technology adoption matrix
@@ -1791,9 +1779,11 @@ def GA_dual(Param, d_ATM, S_values, PAX_yearly):
 
 def Decision_Rule(Param, K0, d, theta, condition):
     """
-    This function creates a new delta capacity vector while considering a decision rule.
+    This function creates a new delta capacity vector while considering a decision rule
+    which is previously defined.
 
-    Args:
+    Parameters:
+        Param (dict): Parameter Dictionary
         K0 (int): Initial Capacity
         D (ndarray): Demand Matrix (2D or 3D)
         theta (ndarray or int): Capacity Change Vector
@@ -1801,7 +1791,9 @@ def Decision_Rule(Param, K0, d, theta, condition):
 
     Returns:
         delta_K_Flex (ndarray): Delta capacity vector(s) considering the decision rule
-                                Shape matches input D: (scenarios, time) or (scenarios, time, mixes)
+
+    To call the function use following syntax:
+        Decision_Rule(Param, K0, d, theta, condition)
     """
     if d.ndim == 2:
         # 2D Case: (scenarios, time)
@@ -1843,8 +1835,18 @@ def Decision_Rule(Param, K0, d, theta, condition):
 
 def Parameter_combinations(Param, n=1000, Apply_Mix=False):
     """
-    Generate all combinations of parameters within specified ranges.
-    Returns a list of tuples, each containing a unique combination of parameters.
+    This function generates all possible combinations of parameters for the optimization process.
+
+    Parameters:
+        Param (dict): Parameter Dictionary
+        n (int): Number of samples to return
+        Apply_Mix (bool): If True, applies mix to the parameter combinations
+
+    Returns:
+        sampled_combinations (list): List of sampled parameter combinations
+
+    To call the function use following syntax:
+        Parameter_combinations(Param, n=1000, Apply_Mix=False)
     """
     # Theta
     lower_theta = Param["lower_theta"]
@@ -1904,7 +1906,26 @@ def Parameter_Evaluation(
     Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly, n=1000, Apply_Mix=False
 ):
     """
-    Evaluate the parameters and return the results.
+    This function evaluates the expected net present value (ENPV) for different parameter
+    combinations and returns the maximum ENPV along with the best parameter combination.
+
+    Parameters:
+        Param (dict): Parameter Dictionary
+        d_ATM_Jet (np.array): Jet A1 ATMs in the DHL
+        d_ATM_LH (np.array): LH2 ATMs in the DHL
+        d_ATM_mix (np.array): Total ATMs with Mix in the DHL
+        S_values (np.array): S-Curve Matrix for Technology Adoption
+        PAX_yearly (np.array): Number of Passengers per Year
+        n (int): Number of samples to return
+        Apply_Mix (bool): If True, applies mix to the parameter combinations
+
+    Returns:
+        max_enpv (float): Maximum ENPV value
+        best_params (tuple): Best parameter combination that yields the maximum ENPV
+
+    To call the function use following syntax:
+        Parameter_Evaluation(Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly,
+        n=1000, Apply_Mix=False)
     """
     max_enpv = -np.inf
     best_params = None
@@ -2068,185 +2089,3 @@ def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
     plt.show()
     percentiles = [percentile_10a, percentile_90a, percentile_10b, percentile_90b]
     return percentiles
-
-
-##########################################################################################
-##########################################################################################
-##########################################################################################
-##########################################################################################
-##########################################################################################
-##########################################################################################
-
-
-# def Decision_Rule(K0, D, theta, condition):
-#     """
-#     This function creates new delta capacity vector while considering a decision rule
-
-#     Args:
-#         K0 (int): Initial Capacity
-#         D (ndarray): Demand Matrix
-#         theta (ndarray): Capacity Change Vector
-#         condition (int): Condition for Capacity Increase (difference of K and D)
-
-#     Returns:
-#         delta_K_Flex (ndarray): delta capacity vector considering a decision rule
-
-#     To call this function use the following syntax:
-#         Decision_Rule(K0, D, theta, condition)
-#     """
-#     # Creation of an array with the same shape as D initialized with initial capacity K0
-#     K_Flex = np.full(D.shape, K0, dtype=D.dtype)
-
-#     # For loop to iterate over all values of a Scenario
-#     for t in range(1, D.shape[1]):  # Start from t=1
-#         # Calculate the Difference Matrix
-#         diff = K_Flex[:, t - 1] - D[:, t]
-
-#         # Create an Index Matrix for the condition of over- and undercapacity
-#         over_capacity = np.greater_equal(diff, condition).astype(int)
-#         under_capacity = np.less(diff, condition).astype(int)
-
-#         # Update K_Flex for the next iteration
-#         K_Flex[:, t] = over_capacity * K_Flex[:, t - 1] + under_capacity * (
-#             K_Flex[:, t - 1] + theta
-#         )
-
-#         # Calculation of the delta capacity vector delta_K
-#         delta_K = np.diff((K_Flex) - K0)
-#         delta_K_Flex = np.insert(delta_K, 0, 0, axis=1)
-
-#     return delta_K_Flex
-
-
-# def NPV_Flexible(delta_K, Param, D, condition):
-#     """
-#     This function calculates the Net Present Value for the flexible case by calling the
-#     Capacity and NPV calculation functions
-
-#     Args:
-#         delta_K (ndarray): Delta Capacity Vector
-#         Param (dict): Parameter Dictionary
-#         condition (int): Condition for Capacity Increase (difference of K and D)
-
-#     Returns:
-#         NPV (ndarray): Net Present Value for the Flexible Case
-
-#     To call this function use the following syntax:
-#         NPV_Flexible(delta_K, Param)
-#     """
-#     # Parameter
-#     K0 = Param["K0"]  # Initial Capacity
-
-#     # Calling the Capacity function for the Capacity matrix
-#     K_Flex = Capacity(delta_K, Param)
-
-#     # Calling the NPV calculation function for the NPV vector
-#     NPV = NPV_calculation(K_Flex, D, delta_K, Param, condition)
-
-#     return NPV
-
-
-# def ENPV_Flexible(theta, condition, Param, D):
-#     """
-#     This function calculates the Expected Net Present Value by calling the Decision Rule
-#     and NPV Flexible functions and using the theta and condition values
-
-#     Args:
-#         theta (ndarray): Capacity increase value
-#         condition (int): Condition for Capacity increase (difference of K and D)
-#         Param (dict): Parameter Dictionary
-#         D (ndarray): Demand Matrix
-
-#     Returns:
-#         ENPV (ndarray): Expected Net Present Value in the Flexible case
-
-#     To call this function use the following syntax:
-#         ENPV_Flexible(theta, condition, Param, D)
-#     """
-#     # Parameter
-#     K0 = Param["K0"]  # Initial Capacity
-
-#     # Calling the Decision Rule function for the delta capacity matrix
-#     delta_K = Decision_Rule(K0, D, theta, condition)
-
-#     # Calling the NPV Flexible function for the NPV vector
-#     NPV = NPV_Flexible(delta_K, Param, D, condition)
-
-#     # Calculating the mean of all NPVs to get the ENPV
-#     ENPV = np.mean(NPV)
-
-#     return ENPV
-
-
-# def Optimization(Param, n):
-#     """
-#     This function creates a list of tuples consisiting of each pair of theta and
-#     condition, it reduces the list to a random sample of size n
-
-#     Args:
-#         Param (dict): Parameter Dictionary
-#         n (int): Sample Size
-
-#     Returns:
-#         optimization_params (list of tuples): List of Theta and Condition Tuple Pairs
-
-#     To call this function use the following syntax:
-#         Optimization(Param, n)
-#     """
-#     # Theta
-#     lower_theta = Param["lower_theta"]
-#     upper_theta = Param["upper_theta"]
-#     stepsize_theta = Param["stepsize_theta"]
-
-#     # Condition
-#     lower_cond = Param["lower_cond"]
-#     upper_cond = Param["upper_cond"]
-#     stepsize_cond = Param["stepsize_cond"]
-
-#     # Creation of a List of Tuples
-#     condition = np.arange(lower_cond, upper_cond, stepsize_cond)
-#     theta = np.arange(lower_theta, upper_theta, stepsize_theta)
-#     optimization_params = list(itertools.product(theta, condition))
-
-#     indices = np.random.choice(len(optimization_params), size=n, replace=False)
-#     optimization_params_sample = [optimization_params[i] for i in indices]
-
-#     return optimization_params_sample
-
-
-# def Evaluation(Param, D, n=1000):
-#     """
-#     This function first calls the Optimization function to generate a list of tuples
-#     consisiting of each pair (defined sample size n) of theta and conditon, it then
-#     continues to evaluates all the tuples by iterating over each pair to find the
-#     maximum ENPV value
-
-#     Args:
-#         Param (dict): Parameter Dictionary
-#         D (ndarray): Demand Matrix
-#         n (int): Sample Size
-
-#     Returns:
-#         max_enpv (int): Maximum value of the ENPV,
-#         max_theta (int): optimal value of theta,
-#         max_cond (int): optimal value of the condition
-
-#     To call this function use the following syntax:
-#         Evaluation(Param, D, n)
-#     """
-#     # Calling the Optimization function to get the list of tuples
-#     optimization_params = Optimization(Param, n)
-
-#     # Initialize the maximum values
-#     max_enpv = float("-inf")
-#     max_theta = None
-#     max_cond = None
-
-#     for theta, condition in optimization_params:
-#         ENPV = ENPV_Flexible(theta, condition, Param, D)
-#         if ENPV > max_enpv:
-#             max_enpv = ENPV
-#             max_theta = theta
-#             max_cond = condition
-
-#     return max_enpv, max_theta, max_cond
