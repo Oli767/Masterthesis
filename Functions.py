@@ -1900,56 +1900,6 @@ def Parameter_combinations(Param, n=1000, Apply_Mix=False):
     return sampled_combinations
 
 
-# def Parameter_Evaluation2(
-#     Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly, n=1000
-# ):
-#     """
-#     Evaluate the parameters and return the results.
-#     """
-#     Mix = Param["Mix"]
-#     Optimization_parameters = Parameter_combinations(Param, n, True)
-#     max_enpv = -np.inf
-#     best_params = None
-#     for sample in Optimization_parameters:
-#         delta_K_Jet_short = Decision_Rule(
-#             Param, Param["K0"] * Mix[0], d_ATM_Jet[:, :, 0], sample[0], sample[3]
-#         )
-#         delta_K_Jet_medium = Decision_Rule(
-#             Param, Param["K0"] * Mix[1], d_ATM_Jet[:, :, 1], sample[1], sample[3]
-#         )
-#         delta_K_Jet_long = Decision_Rule(
-#             Param, Param["K0"] * Mix[2], d_ATM_Jet[:, :, 2], sample[2], sample[3]
-#         )
-#         delta_K_Jet = np.stack(
-#             [delta_K_Jet_short, delta_K_Jet_medium, delta_K_Jet_long], axis=2
-#         )
-#         delta_K_LH_short = Decision_Rule(
-#             Param, Param["K0_LH"] * Mix[0], d_ATM_LH[:, :, 0], sample[4], sample[7]
-#         )
-#         delta_K_LH_medium = Decision_Rule(
-#             Param, Param["K0_LH"] * Mix[1], d_ATM_LH[:, :, 1], sample[5], sample[7]
-#         )
-#         delta_K_LH_long = Decision_Rule(
-#             Param, Param["K0_LH"] * Mix[2], d_ATM_LH[:, :, 2], sample[6], sample[7]
-#         )
-#         delta_K_LH = np.stack(
-#             [delta_K_LH_short, delta_K_LH_medium, delta_K_LH_long], axis=2
-#         )
-#         ENPV = ENPV_calculation(
-#             Param,
-#             delta_K_Jet,
-#             delta_K_LH,
-#             d_ATM_mix,
-#             S_values,
-#             PAX_yearly,
-#         )
-#         if ENPV > max_enpv:
-#             max_enpv = ENPV
-#             best_params = sample
-
-#     return max_enpv, best_params
-
-
 def Parameter_Evaluation(
     Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly, n=1000, Apply_Mix=False
 ):
