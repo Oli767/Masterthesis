@@ -35,13 +35,13 @@ def Generate_scenarios(Param):
     # Setting the random seed for reproducibility
     np.random.seed(Param["seed"])
 
-    # Create arrays for indices
+    # Creating arrays for indices
     scenarios = np.arange(0, Forecasts)
 
     # Random values for spread of the scenario
     random_values = np.random.normal(0, 1, size=(len(scenarios), Fth))
 
-    # Calculation of the Demand Matrix
+    # Calculating the demand matrix with the GBM equation
     D = Dt0 * np.exp((mu * dt + sigma * np.sqrt(dt) * random_values).cumsum(axis=1))
 
     return np.round(D, 0)
@@ -60,17 +60,18 @@ def Scenario_plot(
 
     Parameters:
         Param (dict): Parameter Dictionary
-        Scenarios (ndarray): Scenario (Plotting) Data.
-        NoStep (bool): If True, uses a line plot; otherwise, a step plot.
-        Title (str): Title for the plot.
-        label (str): Y-Axis description.
+        Scenarios (ndarray): Scenario (Plotting) Data
+        NoStep (bool): If True, uses a Line pPlot; Otherwise, a Step Plot
+        Title (str): Title of the plot
+        label (str): Y-Axis Description of the Plot
 
     Returns:
-        None: Displays a plot.
+        None: Displays the Plot
 
     To call the function use following syntax:
-        Scenario_plot(Param, Scenarios, NoStep=True, Title="Title", label="Title")
+        Scenario_plot(Param, Scenarios, NoStep, Title, label)
     """
+    # Parameters
     Fth = Param["Fth"] + 1
     n = Param["No_Forecasts_plot"]
     colors = ["blue", "green", "red"]  # Define colors for the last dimension
@@ -83,7 +84,7 @@ def Scenario_plot(
             "Scenarios is a Tuple! Please provide a NumPy array. At the function call Shock_generation the value of display should be set to false!"
         )
 
-    # Ensure Scenarios is at least 2D
+    # Checking if the input is 1D, if so reshaping to 2D
     if Scenarios.ndim == 1:
         Scenarios = Scenarios.reshape(1, -1)
 
@@ -91,7 +92,7 @@ def Scenario_plot(
     Small_Scenario = Scenarios[indices]
     plotvector = np.arange(Fth)
 
-    # Check if the input is 3D and handle accordingly
+    # Checking if the input is 3D
     if Small_Scenario.ndim == 3 and Small_Scenario.shape[2] == 3:
         for i in range(3):
             for scenario in Small_Scenario[:, :, i]:
@@ -122,15 +123,15 @@ def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
 
     Parameters:
         Param (dict): Parameter Dictionary
-        Forecast (np.array): Time series forecast data (vector or matrix)
+        Forecast (np.array): Time Series Forecast Data
         num_shocks (int): Number of shocks (optional)
-        display (bool): Display number of shocks
+        display (bool): Display Number of Shocks -> Creates a Tuple -> Not for Suitable for Plotting Function
 
     Returns:
-        np.array: Updated forecast with shock and recovery adjustments.
+        Forecast_input (np.array): Updated Forecast with Shocks and Recovery Adjustments
 
     To call the function use following syntax:
-        Shock_generation(Param, Forecast, num_shocks)
+        Shock_generation(Param, Forecast, num_shocks, display)
     """
 
     # Setting the random seed for reproducibility
@@ -143,13 +144,13 @@ def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
 
     num_vectors = Forecast_input.shape[0]
 
-    # Determine number of vectors to shock (default: exponential distribution)
+    # Determining number of vectors with shocks (default: exponential distribution)
     if num_shocks is None:
         num_shocks = min(
             num_vectors, max(1, int(np.random.exponential(scale=Param["num_shocks"])))
         )
 
-    # Randomly select `num_shocks` unique vectors to apply the shock
+    # Randomly selecting `num_shocks` vectors to apply the shock
     chosen_vectors = np.random.choice(num_vectors, size=num_shocks, replace=False)
 
     for vector_index in chosen_vectors:
@@ -163,14 +164,14 @@ def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
 
 def Shock_vector(Param, Forecast_vector):
     """
-    This Function applies a demand shock and recovery process to a single forecast vector
+    This function applies a demand shock and recovery process to a single given forecast vector.
 
     Parameters:
         Param (dict): Parameter Dictionary
-        Forecast_vector (np.array): Vector to apply a shock to
+        Forecast_vector (np.array): Given Vector to Apply a Shock
 
     Returns:
-        np.array: Updated forecast vector with shock and recovery adjustments.
+        Forecast_vector (np.array): Updated forecast vector with shock and recovery adjustments.
 
     To call the function use following syntax:
         Shock_vector(Param, Forecast_vector)
@@ -182,13 +183,13 @@ def Shock_vector(Param, Forecast_vector):
     shock_drop_scale = Param["shock_drop_scale"]
     recovery_steepness = Param["recovery_steepness"]
 
-    #  Independent Randomness for Each Vector
-    rng = np.random.default_rng()  # Using independent RNG for randomness per vector
+    # Using independent RNG for randomness per vector
+    rng = np.random.default_rng()
 
-    # Shock duration calculations
+    # Calculating shock duration
     duration_shock = min(
         max(int(rng.exponential(scale=shock_time_scale) + 1), 2), int(Param["Fth"] / 2)
-    )  # Randomized shock duration
+    )  # Randomizing shock duration
     duration_recovery = min(
         max(
             int(
@@ -200,34 +201,34 @@ def Shock_vector(Param, Forecast_vector):
         ),
         Param["Fth"] - duration_shock,
     )
-    # Randomized shock recovery
+    # Randomizing shock recovery
     duration_combined = duration_shock + duration_recovery
     duration = min(Param["Fth"], duration_combined)
 
-    # Determine start index for the shock event
+    # Determining start index for the shock event
     max_start_index = len(Forecast_vector) - duration
     start_index = rng.integers(0, max_start_index)
 
-    # Shock and recovery parameters
+    # Determining the shock and recovery parameters
     D0 = Forecast_vector[start_index]  # Initial demand value before shock
     target = Forecast_vector[start_index + duration]  # Target demand after recovery
 
-    # Shock calculation
+    # Calculating the shock
     shock_drop = Param["Dt0"] * (shock_drop_scale / 100)
     delta_demand = max(
         -rng.exponential(scale=shock_drop), -D0
-    )  # Random shock intensity
+    )  # Randomizing shock intensity
     raw_splits = np.sort(rng.uniform(0, 1, duration_shock - 1))
     raw_splits = np.insert(raw_splits, 0, 0)
     raw_splits = np.append(raw_splits, 1)
     shock_vector = D0 + delta_demand * raw_splits
 
-    # Recovery calculation
+    # Calculating the shock recovery
     k = abs(rng.normal(loc=recovery_steepness, scale=0.1))  # Random recovery rate
     t = np.arange(1, duration_recovery)
     recovery_vector = target - (target - D0) * np.exp(-k * t)
 
-    # Combine shock and recovery
+    # Combining the shock and the shock recovery
     combined_vector = np.round(np.concatenate((shock_vector, recovery_vector)), 2)
     Forecast_vector[start_index : start_index + duration] = combined_vector
 
@@ -236,7 +237,7 @@ def Shock_vector(Param, Forecast_vector):
 
 def DHL_Calculation(Param, Scenario):
     """
-    The DHL function calculates the Demand Hour Load (DHL) based on the given Scenario the Demand Hour Factors with its corresponding limits.
+    This function calculates the Demand Hour Load (DHL) based on the given Scenario, the Demand Hour Factors and its corresponding limits.
 
     Parameters:
         Param (dict): Parameter Dictionary
@@ -252,23 +253,23 @@ def DHL_Calculation(Param, Scenario):
     DHL_L = Param["DHL_Limits"] * 1000000
     DHL_F = Param["DHL_Factors"] / 100
 
-    # Check if the scenario values are within the limits
+    # Checking if the scenario values are within the limits
     Limit = (Scenario < DHL_L[0]).sum()
     if Limit > 0:
         raise ValueError(
             f"Scenario Pax values below the minimum limit of DHL_Factor: {DHL_L[0]} Pax exist."
         )
 
-    # Create the index matrix with 1s where the condition is met, else 0
+    # Creating the index matrix with 1s where the condition is met, else 0
     index_1 = ((Scenario >= DHL_L[0]) & (Scenario < DHL_L[1])).astype(int) * DHL_F[0]
     index_2 = ((Scenario >= DHL_L[1]) & (Scenario < DHL_L[2])).astype(int) * DHL_F[1]
     index_3 = ((Scenario >= DHL_L[2]) & (Scenario < DHL_L[3])).astype(int) * DHL_F[2]
     index_4 = (Scenario >= DHL_L[3]).astype(int) * DHL_F[3]
 
-    # Sum the index matrices to get the final index matrix
+    # Summing the index matrices to get the final index matrix
     index_matrix = sum([index_1, index_2, index_3, index_4])
 
-    # Calculate the DHL by multiplying the Scenarios with the index matrix
+    # Calculating the DHL by multiplying the Scenarios with the index matrix
     DHL = Scenario * index_matrix
 
     return DHL
@@ -276,8 +277,8 @@ def DHL_Calculation(Param, Scenario):
 
 def ATM_yearly(Param, Scenario):
     """
-    This function calculates the Demand per year based on the Demand Hour Load (DHL) given the Demand Hour Factors with its corresponding limits.
-    Lowerlimit set to 0 ATMs, accoridng to the litaerature it should start at approximately 2 ATMs in the DHL which corresponds to 0.05 Mil Pax.
+    This function calculates the ATM Demand per year based on the Demand Hour Load (DHL) given the Demand Hour Factors and its corresponding limits.
+    Lowerlimit set to 0 ATMs, accoridng to the literature it should start at approximately 2 ATMs in the DHL which corresponds to 0.05 Million Passengers.
     To adjust it, change first index lower boundary from limit_0 to limit_00 or adjust the first DHL_Limit from 0 to 0.5
 
     Parameters:
@@ -285,7 +286,7 @@ def ATM_yearly(Param, Scenario):
         Scenario (ndarray): ATM Demand in the DHL Scenario Matrix
 
     Returns:
-        DHL_yearly (ndarray): Yearly ATMs
+        DHL_yearly, DHL_yearly_mix (ndarray): Yearly ATMs
 
     To call the function use following syntax:
         ATM_yearly(Param, Scenario)
@@ -297,7 +298,7 @@ def ATM_yearly(Param, Scenario):
     DHL_L = Param["DHL_Limits"] * 1000000
     DHL_F = Param["DHL_Factors"] / 100
 
-    # Check dimensions of Scenario
+    # Checking dimensions of Scenario
     if Scenario.ndim == 2:
         Scenario = Scenario
     elif Scenario.ndim == 3:
@@ -321,18 +322,19 @@ def ATM_yearly(Param, Scenario):
     limit_20 = np.round((DHL_L[3] * DHL_F[2]) / Average_Pax_capacity, 0)
     limit_020 = np.round((DHL_L[3] * DHL_F[3]) / Average_Pax_capacity, 0)
 
-    # Create the index matrix with 1s where the condition is met, else 0
+    # Creating the index matrix with 1s where the condition is met, else 0
     index_1 = ((Scenario >= limit_0) & (Scenario < limit_1)).astype(int) / DHL_F[0]
     index_2 = ((Scenario >= limit_01) & (Scenario < limit_10)).astype(int) / DHL_F[1]
     index_3 = ((Scenario >= limit_010) & (Scenario < limit_20)).astype(int) / DHL_F[2]
     index_4 = (Scenario >= limit_020).astype(int) / DHL_F[3]
 
-    # Sum the index matrices to get the final index matrix
+    # Summing the index matrices to get the final index matrix
     index_matrix = sum([index_1, index_2, index_3, index_4])
 
-    # Calculate the DHL by multiplying the Scenarios with the index matrix
+    # Calculating the DHL by multiplying the Scenarios with the index matrix
     DHL_yearly = Scenario * index_matrix
 
+    # Applying the Mix to the DHL matrix
     DHL_yearly_mix = DHL_yearly[:, :, np.newaxis] * Mix
 
     return np.round(DHL_yearly, 0), np.round(DHL_yearly_mix, 0)
@@ -340,19 +342,19 @@ def ATM_yearly(Param, Scenario):
 
 def K_yearly(Param, Capacity):
     """
-    This function calculates the yearly capacity based on the given parameters and capacity matrix.
+    This function calculates the yearly capacity based on the given parameters and the capacity matrix.
 
      Parameters:
-         Param (dict): Parameter dictionary containing relevant data.
-         Capacity (ndarray): Capacity matrix to be processed.
+         Param (dict): Parameter Dictionary
+         Capacity (ndarray): Capacity Matrix
 
      Returns:
-         K_yearly (ndarray): Yearly capacity values.
+         K_yearly, K_yearly_mix (ndarray): Yearly capacity matrices
     """
     # Parameters
     Mix = Param["Mix"]
 
-    # Check dimensions of Capacity
+    # Checking dimensions of Capacity
     if Capacity.ndim == 2:
         Capacity = Capacity
     elif Capacity.ndim == 3:
@@ -360,8 +362,10 @@ def K_yearly(Param, Capacity):
     else:
         raise ValueError("Capacity must be a 2D or 3D array.")
 
-    # Calculate yearly capacity
+    # Calculating the yearly capacity by appling the DHL Factors (so far only 0.03)
     K_yearly = Capacity / (0.03 / 100)
+
+    # Applying the Mix to the yearly capacity matrix
     K_yearly_mix = K_yearly[:, :, np.newaxis] * Mix
 
     return K_yearly, K_yearly_mix
@@ -369,14 +373,14 @@ def K_yearly(Param, Capacity):
 
 def Model(t, D0, mu, sigma):
     """
-    In this function the model for the approximation of the demand, Load factor and more is defined and returned.
-    The current model is an exponential function.
+    In this function the model for the approximation of the demand, the load factor and more.
+    The model is defined and returned. The current model represents an exponential function.
 
     Parameters:
-        t (int): Time step in years
-        D0 (float: Initial demand at t=0
-        mu (float): Growth rate of demand per year
-        sigma (float): Volatility of demand development per year
+        t (int): Time Step in Years
+        D0 (float: Initial Demand at t=0
+        mu (float): Growth Rate of Demand per Year
+        sigma (float): Volatility of Demand Development per Year
 
     Returns:
         Model: Approximation Model for the demand, load factor and more
@@ -389,24 +393,24 @@ def Model(t, D0, mu, sigma):
 
 def exponential_fit(x, y):
     """
-    Fits the defined approxiamtion function to the given data and returns the fitted parameters.
+    This function fits the defined approxiamtion function to the given data and returns the fitted parameters.
 
     Parameters:
-        x (array-like): Independent variable data (time).
-        y (array-like): Dependent variable data (demand, load factor or any other dependent value).
+        x (array-like): Independent Variable Data (time).
+        y (array-like): Dependent Variable Data (demand, load factor or any other dependent value).
 
     Returns:
-        trend: Approximation vector in shape (Fth,) if the input is a vector, else the shape is (n_rows, Fth)
+        params (ndarray): Approximation vector in shape (Fth,) if the input is a vector, else the shape is (n_rows, Fth)
 
     To call the function use following syntax:
         exponential_fit(x, y)
     """
 
-    # Call the defined Model function to fit the data
+    # Calling the defined model function to fit the data
     def model_call(t, a, mu, sigma):
         return Model(t, a, mu, sigma)
 
-    # Fit the model to the data using curve_fit, starting with an initial guess
+    # Fitting the model to the data using curve_fit, starting with an initial guess
     initial_guess = [y[0], 0.1, 0.1]
     params, _ = opt.curve_fit(Model, x, y, p0=initial_guess)
 
@@ -415,11 +419,11 @@ def exponential_fit(x, y):
 
 def interpolate_exponential(data):
     """
-    This function fits exponential parameters for a vector or matrix of inputdata and returns the fitted parameters in a vector or matrix format.
+    This function fits exponential parameters given in a list for a vector or matrix of inputdata and returns the fitted parameters in a vector or matrix format.
     The parameters contain the following values:
-    - a: Initial demand at t=0
-    - mu: Growth rate of demand per year
-    - sigma: Volatility of demand development per year
+    - a: Initial Demand at t=0
+    - mu: Growth Rate of Demand per Year
+    - sigma: Volatility of Demand Development per Year
 
     The shape of the output depends on the shape of the input data:
     - For a 1D input: returns a single parameter vector [a, mu, sigma]
@@ -435,12 +439,12 @@ def interpolate_exponential(data):
     To call the function is use following syntax:
         interpolate_exponential(data)
     """
-    # For 1D data, fit a single exponential function
+    # For 1D data, fitting a single exponential function
     if data.ndim == 1:
         x = np.linspace(0, len(data) - 1, len(data))
         return exponential_fit(x, data)
 
-    # For 2D data, fit an exponential function to each row
+    # For 2D data, fitting an exponential function to each row
     elif data.ndim == 2:
         _, n_cols = data.shape
         x = np.linspace(0, n_cols - 1, n_cols)
@@ -451,7 +455,6 @@ def interpolate_exponential(data):
         param_matrix = np.apply_along_axis(fit_row, axis=1, arr=data)
         return param_matrix
 
-    # If the input data is neither 1D nor 2D array, raise an error
     else:
         raise ValueError("Input data must be 1D or 2D array.")
 
@@ -461,12 +464,15 @@ def trend_approximation(Param, CurveParameters, Adjust_mu=False):
     This function computes trend approximation for a single vector or matrix of curve parameters by calling the previously defined model function.
 
     Parameters:
-        Param (dict): Dictionary
-        CurveParameters (ndarray): Inital value a, growth rate mu, and volatility sigma
-        Adjust_mu (Bool): Condition whether to subtract Adjust_mu_factor from mu
+        Param (dict): Parameter Dictionary
+        CurveParameters (ndarray):
+            - Inital Value a
+            - Growth Rate mu
+            - Volatility sigma
+        Adjust_mu (Bool): Condition to subtract Adjust_mu_factor from mu
 
     Returns:
-        trend (ndarray): approximation trend for the demand, load factor or any other dependent value accoridngt to the model function.
+        trend (ndarray): Approximation Trend for the Demand, Load Factor or any other Dependent Value According to the Model Function
 
     To call the function use following syntax:
         trend_approximation(Param, CurveParameters, Adjust_mu=True)
@@ -475,31 +481,31 @@ def trend_approximation(Param, CurveParameters, Adjust_mu=False):
     time = Param["time"]
     Adjust_mu_factor = Param["adjusted_mu"]
 
-    # Adjust the shape to (1, Fth)
+    # Adjusting the shape to (1, Fth)
     time_expanded = time[np.newaxis, :]
 
-    # Ensure the input is at least of 2D shape
+    # Ensuring the input is at least of 2D shape
     CurveParameters = np.atleast_2d(CurveParameters)
 
-    # Extract parameters from CurveParameters
+    # Extracting parameters from CurveParameters
     initial_value = CurveParameters[:, [0]]  # (n, 1)
     mu = CurveParameters[:, [1]]  # (n, 1)
     sigma = CurveParameters[:, [2]]  # (n, 1)
 
-    # Adjust mu if condition applies
+    # Adjusting mu if condition applies
     if Adjust_mu:
         mu = mu - Adjust_mu_factor
 
-    # Compute the trend using the model function
+    # Computing the trend using the model function
     trend = Model(time_expanded, initial_value, mu, sigma)
 
-    # Readjust the shape of the output if the input was a 1D vector
+    # Readjusting the shape of the output if the input was a 1D vector
     return trend[0] if CurveParameters.shape[0] == 1 else trend
 
 
 def Load_Factor_matrix(Param, Scenario):
     """
-    This function calcuates the Loadfactor according to the forecasts and a calculated trendline.
+    This function calcuates the Load Factor according to the forecasts and a calculated trendline.
     The function uses the exponential fit model function to calculate the trendline.
 
     Parameters:
@@ -507,45 +513,37 @@ def Load_Factor_matrix(Param, Scenario):
         Scenario (ndarray): Passenger Demand Scenario Matrix
 
     Returns:
-        smoothed_Load_Factor (ndarray): Smoothed Load Factor matrix
+        Load_Factor (ndarray): Load Factor Matrix
 
     To call the function use following syntax:
         Load_Factor_matrix(Param, Scenario)
     """
-    # Initial Loadfactor
+    # Parameters
     LF = Param["LF"]
-    # Interpolation/ Approximation of Demand-Scenario
+
+    # Interpolating the Demand-Scenario
     params_list = interpolate_exponential(Scenario)
 
-    # Demand-Scenario-Trend Approximation
+    # Approximating the Demand-Scenario-Trendline
     trend = trend_approximation(Param, params_list)
 
-    # Smoothing of the Demand-Scenario-Trend
+    # Smoothing the Demand-Scenario-Trend
     smoothing_factor_demand = Param["smoothing_factor_demand"]
     smoothed_scenario = trend + (smoothing_factor_demand * (Scenario - trend))
 
-    # Interpolation of the smoothed Demand-Scenario
+    # Interpolating the smoothed Demand-Scenario
     params_scenario = interpolate_exponential(smoothed_scenario)
     trend_smoothed_shifted = trend_approximation(Param, params_scenario, True) / LF
 
-    # Calculation of Load Factor
+    # Calculating the Load Factor
     Load_Factor = smoothed_scenario / trend_smoothed_shifted
 
-    # # Smoothing of Load Factor
-    # params_Load_Factor = interpolate_exponential(Load_Factor)
-    # trend_Load_Factor = trend_approximation(Param, params_Load_Factor, False)
-
-    # smoothing_factor_Load_Factor = Param["smoothing_factor_Load_Factor"]
-    # smoothed_Load_Factor = trend_Load_Factor + (
-    #     smoothing_factor_Load_Factor * (Load_Factor - trend_Load_Factor)
-    # )
-    smoothed_Load_Factor = Load_Factor
     # Adjust Loadfactor for initial setting
-    delta = LF - smoothed_Load_Factor[:, 0]
-    smoothed_Load_Factor = smoothed_Load_Factor + delta.reshape(-1, 1)
-    smoothed_Load_Factor = np.clip(smoothed_Load_Factor, 0.01, 1)
+    delta = LF - Load_Factor[:, 0]
+    Load_Factor = Load_Factor + delta.reshape(-1, 1)
+    Load_Factor = np.clip(Load_Factor, 0.01, 1)
 
-    return smoothed_Load_Factor
+    return Load_Factor
 
 
 def ATM(Param, Demand, Load_Factor):
@@ -553,12 +551,12 @@ def ATM(Param, Demand, Load_Factor):
     This function calculates the Air Traffic Movements (ATM) based on the demand, load factor, aircraft mix and passenger capacity.
 
     Parameters:
-        Param (dict): Parameter dictionary.
-        Demand (ndarray): Demand scenario matrix.
-        Load_Factor (ndarray): Load factor values.
+        Param (dict): Parameter Dictionary
+        Demand (ndarray): Demand Scenario Matrix
+        Load_Factor (ndarray): Load Factor Matrix
 
     Returns:
-        ATM (ndarray): Total air traffic movements.
+        ATM (ndarray): Total Air Traffic Movements
 
     To call the function use following syntax:
         ATM(Param, Demand, Load_Factor)
@@ -567,42 +565,44 @@ def ATM(Param, Demand, Load_Factor):
     Pax_capacity = Param["Pax_capacity"]
     Mix = Param["Mix"]
 
-    # Calculation of the Transported Pax per Aircraft category
+    # Calculating the Transported Passengers per Aircraft Category
     Pax_s = Load_Factor * Pax_capacity[0]
     Pax_m = Load_Factor * Pax_capacity[1]
     Pax_l = Load_Factor * Pax_capacity[2]
 
-    # Calculation of the Air Traffic Movements (ATM)
+    # Calculating the Air Traffic Movements (ATM)
     ATM = Demand / (Mix[0] * Pax_s + Mix[1] * Pax_m + Mix[2] * Pax_l)
     ATM = np.round(ATM, 0)
 
-    # Prepare an ATM-Matrix for plotting
-    ATM_plotting = ATM[:, :, np.newaxis] * Mix
+    # Applying the Mix to the ATM matrix
+    ATM_mix = ATM[:, :, np.newaxis] * Mix
 
-    return ATM, ATM_plotting
+    return ATM, ATM_mix
 
 
 def ATM_plot(ATM_Fleet, Param):
     """
-    This function is plotting the Air Traffic Mix Forecast data vector or matrix against the forecast time
-    horizon vector Fth, it allows to shows only a selected number (No_Forecasts_plot) of plots
+    This function is plotting the Air Traffic Movement (ATM) mix matrix against the forecast time
+    horizon vector (Fth), it only shows a selected number (No_Forecasts_plot) of plots
 
     Parameters:
         ATM_Fleet: ATM Szenario Matrix
         Param (dict): Parameter Dictionary
 
     Returns:
-        Plot of "No_Forecasts_plot" Air Traffic Mix Forecasts Against the Forecast Time Horizon
+        None: Plot of "No_Forecasts_plot" Air Traffic Mix Forecasts Against the Forecast Time Horizon
 
     To call the function use following syntax:
         ATM_plot(ATM_Fleet, Param)
+
     """
+    # Parameters
+    time = Param["time"]
+
     # Setting the random seed for reproducibility
     np.random.seed(Param["seed"])
 
-    time = Param["time"]
-    # Randomly select indices without replacement
-
+    # Making sure the minimum number of plots to be shown does not lay below the available number of plots
     No_Forecasts_plot = min(Param["No_Forecasts_plot"], Param["No_Forecasts"])
     selected_indices = np.random.choice(
         Param["No_Forecasts"], No_Forecasts_plot, replace=False
@@ -610,23 +610,23 @@ def ATM_plot(ATM_Fleet, Param):
 
     plt.figure(figsize=(12, 6))
 
-    # Loop through selected simulation runs
+    # Looping through selected simulation runs
     for i in selected_indices:
         Shorthaul_Fleet = ATM_Fleet[i, :, 0]  # Short-haul for this run
         Mediumhaul_Fleet = ATM_Fleet[i, :, 1]  # Medium-haul for this run
         Longhaul_Fleet = ATM_Fleet[i, :, 2]  # Long-haul for this run
 
-        # Plot each run as a thin line to see individual trends
+        # Plotting each run as a thin line to see individual trends
         plt.plot(time, Shorthaul_Fleet, color="blue", alpha=0.3)
         plt.plot(time, Mediumhaul_Fleet, color="green", alpha=0.3)
         plt.plot(time, Longhaul_Fleet, color="red", alpha=0.3)
 
-    # Add labels and legend
+    # Adding labels
     plt.xlabel("Years")
     plt.ylabel("Number of Aircraft Movements")
     plt.title("Total Air Traffic Movements per Aircarft Category")
 
-    # Add a single bold line to represent one of the runs for visibility in legend
+    # Adding a single bold line to represent one of the runs for visibility in legend
     plt.plot(
         time,
         ATM_Fleet[selected_indices[0], :, 0],
@@ -667,7 +667,6 @@ def exponential_matrix(Param):
 
     To call the function use following syntax:
         exponential_matrix(Param)
-
     """
     # Parameters
     Fth = Param["Fth"] + 1
@@ -680,21 +679,21 @@ def exponential_matrix(Param):
     # Setting the random seed for reproducibility
     np.random.seed(Param["seed"])
 
-    # Generate positive and negative steps
+    # Generating positive and negative steps
     pos_steps = np.random.exponential(scale=Average_step, size=(No_Forecasts, Fth - 1))
     neg_steps = np.random.exponential(scale=scale_down, size=(No_Forecasts, Fth - 1))
 
-    # Create mask for negative steps
+    # Creating a mask for negative steps
     is_negative = np.random.rand(No_Forecasts, Fth - 1) < p_down
     steps = np.where(is_negative, -neg_steps, pos_steps)
 
-    # Generate random offsets per forecast
+    # Generating a random offsets per forecast
     t_offset = np.random.exponential(scale=offset_scale, size=(No_Forecasts, 1))
 
-    # Initialize matrix with zeros
+    # Initializing a matrix with zeros
     matrix = np.zeros((No_Forecasts, Fth))
 
-    # Compute cumulative sum with offset
+    # Computing the cumulative sum with the offset
     matrix[:, 1:] = np.cumsum(steps, axis=1) - t_offset
 
     return np.clip(matrix, 0, Fth)
@@ -702,18 +701,17 @@ def exponential_matrix(Param):
 
 def S_curve(Param):
     """
-    This function calculates S-Curve values according to the set Parameters and the
+    This function calculates S-Curve values according to the set parameters and the
     matrix from the exponential_matrix function
 
     Parameters:
         Param (dict): Parameter Dictionary
 
     Returns:
-        S_values_matrix (ndarray): S-Curve values Matrix
+        S_values_matrix (ndarray): S-Curve Values Matrix
 
     To call the function use following syntax:
         S_curve(Param)
-
     """
     # Parameters
     t_max = Param["Fth"] + 1
@@ -721,14 +719,14 @@ def S_curve(Param):
     L = Param["L"]
     k = Param["k"]
 
-    # Generate the exponential matrix
+    # Generating an exponential matrix
     matrix = exponential_matrix(Param)
 
-    # Compute S-Curve values with zero offset period
+    # Computing the S-Curve Values with Zero Offset Period
     S_values_matrix = np.zeros_like(matrix)
     S_values_matrix[:, :] = L / (1 + np.exp(-k * (matrix[:, :] - t0)))
 
-    # Correcting the S-Curve values to eliminate the non-zero baseline at time = 0
+    # Correcting the S-Curve Values to Eliminate the non-zero baseline at time = 0
     S_values_correction = L / (1 + np.exp(-k * (0 - t0)))
     S_values_matrix = S_values_matrix - S_values_correction
 
@@ -737,7 +735,7 @@ def S_curve(Param):
 
 def S_curve_plot(Param, S_Values):
     """
-    This function Plots the set S-Curve with a set of randomly choosen S-Cruve values from the
+    This function plots the set S-Curve with a set of randomly choosen S-Curve values from the
     exponential_matrix and S_curve functions.
 
     Parameters:
@@ -745,7 +743,7 @@ def S_curve_plot(Param, S_Values):
         S_Values (ndarray): S-Curve values Matrix
 
     Returns:
-        Plot of the S-Curve and a random set of the S-Curve values
+        None: Plot of the S-Curve and a Random set of the S-Curve Values
 
     To call the function use following syntax:
         S_curve_plot(Param, S_Values)
@@ -762,15 +760,14 @@ def S_curve_plot(Param, S_Values):
     plt.figure(figsize=(10, 6))
     plt.plot(time, S, label="S-Curve", color="blue")
 
-    # Randomly select indices to plot
+    # Randomly selecting indices to plot
     No_Forecasts_plot = min(Param["No_Forecasts_plot"], Param["No_Forecasts"])
     selected_indices = np.random.choice(
         S_Values.shape[0], No_Forecasts_plot, replace=False
     )
 
-    # Plot selected forecasts
+    # Ploting the selected forecasts
     plt.plot(time, S_Values[selected_indices].T, alpha=0.7)
-
     plt.xlabel("Time [yrs]")
     plt.ylabel("Percentage [%]")
     plt.legend()
@@ -781,17 +778,15 @@ def S_curve_plot(Param, S_Values):
 
 def LH2_technology_adoption(Param, S_values, ATM_matrix):
     """
-    This function calculates the LH2 technology adoption based on the S-curve adaption Scenarios
-    and ATM matrix as well as the ATM mix
+    This function calculates the LH2 technology adoption based on the S-curve adaption scenarios and the ATM mix matrix.
 
     Parameters:
         Param (dict): Parameter dictionary
-        S_values (ndarray): S-curve values for technology adoption
+        S_values (ndarray): S-curve Values for Technology Adoption
         ATM_matrix (ndarray): ATM Scenario Matrix
 
     Returns:
-        LH2_adoption (ndarray): LH2 technology adoption values
-        LH2_mix_adoption (ndarray): LH2 mix adoption values
+        LH2_adoption, LH2_mix_adoption (ndarray): LH2 Technology Adoption Values
 
     To call the function use following syntax:
         LH2_technology_adoption(Param, S_values, ATM_matrix)
@@ -799,6 +794,7 @@ def LH2_technology_adoption(Param, S_values, ATM_matrix):
     # Parameters
     Mix = Param["Mix"]  # Aircraft Mix
 
+    # Checking the shape of the ATM matrix
     if ATM_matrix.ndim == 2:
         ATM_matrix = ATM_matrix
     elif ATM_matrix.ndim == 3:
@@ -806,10 +802,10 @@ def LH2_technology_adoption(Param, S_values, ATM_matrix):
     else:
         raise ValueError("ATM_matrix must be either 2D or 3D.")
 
-    # Calcualtion of the LH2 technology adoption
+    # Calcualting the LH2 technology adoption
     LH2_adoption = np.round(ATM_matrix * S_values, 0)
 
-    # Calculation of the LH2 mix adoption
+    # Calculating the LH2 mix adoption
     LH2_mix_adoption = np.round(LH2_adoption[:, :, np.newaxis] * Mix, 0)
 
     # Alternative calculation of the LH2 mix adoption
@@ -821,8 +817,7 @@ def LH2_technology_adoption(Param, S_values, ATM_matrix):
 def Capacity_2D(Param, delta_K, adjustK0=False):
     """
     This function calculates the capacity based on the initial capacity (K0) and the cumulative sum of delta_K.
-    It returns the capacity either as a vector or as a matrix depending on the Matrix parameter.
-    The capacity is calculated for each forecast time step, and if Matrix is True, it stacks the vector K vertically
+    It returns the capacity as a matrix. The capacity is calculated for each forecast time step.
 
     Parameters:
         Param (dict): Parameter Dictionary
@@ -830,7 +825,7 @@ def Capacity_2D(Param, delta_K, adjustK0=False):
         adjustK0 (bool): If True, adjusts K0 to K0_LH
 
     Returns:
-        K (np.array): Capacity vectors in 2D shape
+        K (np.array): Capacity Vectors in 2D shape
 
     To call the function use following syntax:
         Capacity(Param, delta_K)
@@ -841,6 +836,7 @@ def Capacity_2D(Param, delta_K, adjustK0=False):
     No_Forecasts = Param["No_Forecasts"]
     TTF = Param["TTF"][1]
 
+    # Adjusting K0 for LH2 initial Capacity
     if adjustK0 == True:
         K0 = K0_LH
     else:
@@ -863,8 +859,7 @@ def Capacity_2D(Param, delta_K, adjustK0=False):
 def Capacity_3D(Param, delta_K, adjustK0=False):
     """
     This function calculates the capacity based on the initial capacity (K0) and the cumulative sum of delta_K.
-    It returns the capacity either as a vector or as a matrix depending on the Matrix parameter.
-    The capacity is calculated for each forecast time step, and if Matrix is True, it stacks the vector K vertically
+    It returns the capacity as a matrix depending on the matrix parameter. The capacity is calculated for each forecast time step.
 
     Parameters:
         Param (dict): Parameter Dictionary
@@ -872,7 +867,7 @@ def Capacity_3D(Param, delta_K, adjustK0=False):
         adjustK0 (bool): If True, adjusts K0 to K0_LH
 
     Returns:
-        K (np.array): Capacity vector or matrix depending on the Matrix parameter.
+        K (np.array): Capacity Vector or Matrix Depending on the Matrix Parameter.
 
     To call the function use following syntax:
         Capacity(Param, delta_K)
@@ -883,6 +878,7 @@ def Capacity_3D(Param, delta_K, adjustK0=False):
     Mix = Param["Mix"]  # Aircraft Mix
     TTF = Param["TTF"]  # Turnaround time factor
 
+    # Adjusting K0 for LH2 initial Capacity
     if adjustK0 == True:
         K0 = K0_LH
     else:
@@ -934,7 +930,6 @@ def Capex_Jet(Param, delta_K_Jet):
         ((delta_K_Jet) ** alpha) * (p_Dock * CC_Dock + (1 - p_Dock) * CC_Open),
         2,
     )
-
     return CI_Jet
 
 
@@ -1008,7 +1003,7 @@ def Capex_LH(Param, delta_K_LH, D_LH_yearly):
         * (delta_K_LH_Matrix) ** alpha
         * (p_Dock * (CC_Dock + CC_Pipeline) + (1 - p_Dock) * CC_Open)
     )
-    # Combine the two conditions to get the final Installation Cost for LH2 stands
+    # Combining the two conditions to get the final Installation Cost for LH2 stands
     CI_LH = np.round(CI_LH_greater + CI_LH_less_equal, 2)
 
     return CI_LH
@@ -1081,13 +1076,13 @@ def Opex_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
     greater = np.greater(diff, condition).astype(int)
     less_equal = np.less_equal(diff, condition).astype(int)
 
-    # Calculate the operational expenditure based on the demand and capacity
+    # Calculating the operational expenditure based on the demand and capacity
     # k_Jet > d_Jet
     CO_Jet_greater = greater * (
         D_Jet_yearly * (p_Dock * CE_Dock_Jet + (1 - p_Dock) * CE_Open_Jet)
         + (K_Jet_yearly - D_Jet_yearly) * CM_Over_Jet
     )
-    # K_Jet <= D_Jet
+    # k_Jet <= d_Jet
     CO_Jet_less_equal = less_equal * (
         K_Jet_yearly * (p_Dock * CE_Dock_Jet + (1 - p_Dock) * CE_Open_Jet)
         + (D_Jet_yearly - K_Jet_yearly) * CM_Under_Jet
@@ -1117,7 +1112,7 @@ def Opex_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
         Opex_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly)
     """
     # Parameters
-    p_Dock = Param["p_Dock"]
+    p_Dock = Param["p_Dock"]  # Share of aircraft beeing handeled at dock stands
     CE_Dock_LH = Param["CE_Dock_LH"]  # Cost of energy for LH2
     CE_Open_LH = Param["CE_Open_LH"]  # Cost of energy for open LH2
     CM_Over_LH = Param["CM_Over_LH"]  # Cost of maintenance for over capacity
@@ -1165,13 +1160,13 @@ def Opex_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
     greater = np.greater(diff, condition).astype(int)
     less_equal = np.less_equal(diff, condition).astype(int)
 
-    # Calculate the operational expenditure based on the demand and capacity
-    # K_LH > D_LH
+    # Calculating the operational expenditure based on the demand and capacity
+    # k_LH > d_LH
     CO_LH_greater = greater * (
         D_LH_yearly * (p_Dock * CE_Dock_LH + (1 - p_Dock) * CE_Open_LH)
         + (K_LH_yearly - D_LH_yearly) * CM_Over_LH
     )
-    # K_LH <= D_LH
+    # k_LH <= d_LH
     CO_LH_less_equal = less_equal * (
         K_LH_yearly * (p_Dock * CE_Dock_LH + (1 - p_Dock) * CE_Open_LH)
         + (D_LH_yearly - K_LH_yearly) * CM_Under_LH
@@ -1184,14 +1179,14 @@ def Opex_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
 
 def Opex_Terminal(Param, PAX_yearly):
     """
-    This function calculates the operating expenditure (Opex) for terminal based on Passenger numbers.
+    This function calculates the operating expenditure (Opex) for a terminal based on Passenger numbers.
 
     Parameters:
         Param (dict): Parameter Dictionary
         PAX_yearly (np.array): Number of Passengers per Year
 
     Returns:
-        CO_Terminal (np.array): Operating for Jet A1 aircraft stands
+        CO_Terminal (np.array): Operating Cost for the Terminal
 
     To call the function use following syntax:
         Opex_Terminal(Param, PAX_yearly)
@@ -1221,7 +1216,7 @@ def Total_Cost_calculation(
     D_LH_yearly,
 ):
     """
-    This function calculates the cost of the airport infrastructure based on the capital expenditure (Capex) and
+    This function calculates the cost of the airport infrastructure project based on the capital expenditure (Capex) and
     operational expenditure (Opex) for Jet A1 and LH2 aircraft stands, as well as terminal operations.
 
     Parameters:
@@ -1239,11 +1234,11 @@ def Total_Cost_calculation(
         D_LH_yearly (np.array): Yearly LH2 Stand Demand
 
     Returns:
-        Total_cost (np.array): Total cost
+        Total_cost (np.array): Total Cost
 
     To call the function use following syntax:
         Total_Cost_calculation(Param, delta_K_Jet, delta_K_LH, k_Jet, k_LH, d_Jet,
-        d_LH, PAX_yearly, K_Jet_yearly, K_LH_yearly, D_Jet_yearly, D_LH_yearly,)
+        d_LH, PAX_yearly, K_Jet_yearly, K_LH_yearly, D_Jet_yearly, D_LH_yearly)
     """
     # Installation Cost
     CI_Jet = Capex_Jet(Param, delta_K_Jet)
@@ -1278,9 +1273,9 @@ def Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
         Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly)
     """
     # Parameters
-    p_dock = Param["p_Dock"]
-    re_Dock_Jet = Param["re_Dock_Jet"]  # Revenue from docking for Jet A1
-    re_Open_Jet = Param["re_Open_Jet"]  # Revenue from open Jet A1
+    p_dock = Param["p_Dock"]  # Share of aircrafts beeing handeled at dock stands
+    re_Dock_Jet = Param["re_Dock_Jet"]  # Revenue from Jet A1 aircraft at dock stands
+    re_Open_Jet = Param["re_Open_Jet"]  # Revenue from Jet A1 aircraft at open stands
     rf_Jet = Param["rf_Jet"]  # Fixed revenue for Jet A1
     condition = Param["condition"]  # Condition for the difference matrix
 
@@ -1323,20 +1318,20 @@ def Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
     greater = np.greater(diff, condition).astype(int)
     less_equal = np.less_equal(diff, condition).astype(int)
 
-    # Calculate the operational expenditure based on the demand and capacity
-    # K_Jet > D_Jet
+    # Calculating the operational expenditure based on the demand and capacity
+    # k_Jet > d_Jet
     R_Jet_greater = (
         greater * D_Jet_yearly * (p_dock * re_Dock_Jet)
         + (1 - p_dock) * re_Open_Jet
         + rf_Jet
     )
-    # K_Jet <= D_Jet
+    # k_Jet <= d_Jet
     R_Jet_less_equal = (
         less_equal * K_Jet_yearly * (p_dock * re_Dock_Jet)
         + (1 - p_dock) * re_Open_Jet
         + rf_Jet
     )
-    # Combine the two conditions to get the final operational expenditure
+    # Combining the two conditions to get the final operational expenditure
     R_Jet = np.round(R_Jet_greater + R_Jet_less_equal, 2)
 
     return R_Jet
@@ -1360,10 +1355,10 @@ def Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
         Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly)
     """
     # Parameters
-    p_dock = Param["p_Dock"]  # Probability of docking
-    re_Dock_LH = Param["re_Dock_LH"]  # Revenue from docking for LH2
-    re_Open_LH = Param["re_Open_LH"]  # Revenue from open LH2
-    rf_LH = Param["rf_LH"]  # Fixed revenue for LH2
+    p_dock = Param["p_Dock"]  # Share of aircraft beeing handeled at dock stands
+    re_Dock_LH = Param["re_Dock_LH"]  # Revenue from LH2 aircraft at dock stands
+    re_Open_LH = Param["re_Open_LH"]  # Revenue from LH2 aircraft at open stands
+    rf_LH = Param["rf_LH"]  # Revenue for LH2 refueling
     condition = Param["condition"]  # Condition for the difference matrix
 
     # If condition to adjust k_Jet shape
@@ -1405,20 +1400,20 @@ def Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
     greater = np.greater(diff, condition).astype(int)
     less_equal = np.less_equal(diff, condition).astype(int)
 
-    # Calculate the operational expenditure based on the demand and capacity
-    # K_LH > D_LH
+    # Calculating the operational expenditure based on the demand and capacity
+    # k_LH > d_LH
     R_LH_greater = (
         greater * D_LH_yearly * (p_dock * re_Dock_LH)
         + (1 - p_dock) * re_Open_LH
         + rf_LH
     )
-    # K_LH <= D_LH
+    # k_LH <= d_LH
     R_LH_less_equal = (
         less_equal * K_LH_yearly * (p_dock * re_Dock_LH)
         + (1 - p_dock) * re_Open_LH
         + rf_LH
     )
-    # Combine the two conditions to get the final operational expenditure
+    # Combining the two conditions to get the final operational expenditure
     R_LH = np.round(R_LH_greater + R_LH_less_equal, 2)
 
     return R_LH
@@ -1440,8 +1435,7 @@ def Revenue_Pax(Param, PAX_yearly):
     """
     # Parameters
     re_Pax = Param["re_Pax"]  # Revenue per passenger within the terminal
-    R_Pax = PAX_yearly * re_Pax
-    return R_Pax
+    return PAX_yearly * re_Pax
 
 
 def Revenue_Rent(Param, k_Jet, k_LH):
@@ -1450,11 +1444,11 @@ def Revenue_Rent(Param, k_Jet, k_LH):
 
     Parameters:
         Param (dict): Parameter Dictionary
-        k_Jet (np.array): Total Capacity in the DHL for Jet A1
-        k_LH (np.array): Total Capacity in the DHL for LH2
+        k_Jet (np.array): Total Capacity in the DHL for Jet A1 aircraft stands
+        k_LH (np.array): Total Capacity in the DHL for LH2 aircraft stands
 
     Returns:
-        R_Rent (np.array): Revenue from renting in USD
+        R_Rent (np.array): Revenue from renting out spaces in USD
 
     To call the function use following syntax:
         Reveneue_Rent(Param, K)
@@ -1462,6 +1456,7 @@ def Revenue_Rent(Param, k_Jet, k_LH):
     # Parameters
     re_Rent = Param["re_Rent"]  # Revenue from renting spaces per unit of capacity K
 
+    # If condition to adjust k_Jet shape
     if k_Jet.ndim == 2:
         k_Jet = k_Jet
     elif k_Jet.ndim == 3:
@@ -1469,6 +1464,7 @@ def Revenue_Rent(Param, k_Jet, k_LH):
     else:
         raise ValueError("k_Jet has neither 2D or 3D shape")
 
+    # If condition to adjust k_LH shape
     if k_LH.ndim == 2:
         k_LH = k_LH
     elif k_LH.ndim == 3:
@@ -1476,7 +1472,7 @@ def Revenue_Rent(Param, k_Jet, k_LH):
     else:
         raise ValueError("k_LH has neither 2D or 3D shape")
 
-    # Calculate the total revenue from renting
+    # Calculating the total revenue from renting
     R_Rent = (k_Jet + k_LH) * re_Rent
 
     return R_Rent
@@ -1495,21 +1491,21 @@ def Total_Revenue_calculation(
     D_LH_yearly,
 ):
     """
-    This function calculates the total revenues from the airport infrastructure based on
+    This function calculates the total revenues from the airport infrastructure project based on
     the Jet A1 and LH2 aircraft stand operation, as well as terminal and rental revenues.
 
     Parameters:
         Param (dict): Parameter Dictionary
-        K (np.array): Total Capacity
-        k_Jet (np.array): Stand Capacity Vector for Jet A1 in the DHL
-        k_LH (np.array): Stand Capacity Vector for LH2 in the DHL
-        d_Jet (np.array): Stand Demand Vector for Jet A1 in the DHL
-        d_LH (np.array): Stand Demand Vector for LH2 in the DHL
+        K (np.array): Total Stand Capacity
+        k_Jet (np.array): Stand Capacity Vector for Jet A1 Aircraft Stands in the DHL
+        k_LH (np.array): Stand Capacity Vector for LH2 Aircraft Stands in the DHL
+        d_Jet (np.array): Stand Demand Vector for Jet A1 Aircraft Stands in the DHL
+        d_LH (np.array): Stand Demand Vector for LH2 Aircraft Stands in the DHL
         PAX (np.array): Number of Passengers per Year
-        K_Jet_yearly (np.array): Yearly Jet A1 Stand Capacity
-        K_LH_yearly (np.array): Yearly LH2 Stand Capacity
-        D_Jet_yearly (np.array): Yearly Jet A1 Stand Demand
-        D_LH_yearly (np.array): Yearly LH2 Stand Demand
+        K_Jet_yearly (np.array): Yearly Jet A1 Aircraft Stand  Capacity
+        K_LH_yearly (np.array): Yearly LH2 Aircraft Stand Capacity
+        D_Jet_yearly (np.array): Yearly Jet A1 Aircraft Stand Demand
+        D_LH_yearly (np.array): Yearly LH2 Aircraft Stand Demand
 
     Returns:
         Total_revenue (np.array): Total revenue from the airport infrastructure
@@ -1518,19 +1514,19 @@ def Total_Revenue_calculation(
         Total_Revenue_calculation(Param, k_Jet, k_LH, d_Jet, d_LH, PAX_yearly,
         K_Jet_yearly, K_LH_yearly, D_Jet_yearly, D_LH_yearly)
     """
-    # Calculate the revenue for Jet A1
+    # Calculating the revenue for Jet A1
     R_Jet = Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly)
 
-    # Calculate the revenue for LH2
+    # Calculating the revenue for LH2
     R_LH = Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly)
 
-    # Calculate the revenue from passengers
+    # Calculating the revenue from passengers
     R_Pax = Revenue_Pax(Param, PAX_yearly)
 
-    # Calculate the revenue from renting
+    # Calculating the revenue from renting
     R_Rent = Revenue_Rent(Param, k_Jet, k_LH)
 
-    # Total revenue is the sum of all revenues
+    # Calculating the total revenue as the sum of all revenues
     Total_revenue = R_Jet + R_LH + R_Pax + R_Rent
 
     return Total_revenue
@@ -1543,13 +1539,13 @@ def NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
 
     Parameters:
         Param (dict): Parameter Dictionary
-        delta_K (np.array): Capacity Change Vector
+        delta_K (np.array): Aircraft Stand Capacity Change Vector
         d_ATM (np.array): Total Air Traffic Movements
         S_value_matrix (np.array): S-Curve Matrix for Technology Adoption
         PAX_yearly (np.array): Number of Passengers per Year
 
     Returns:
-        NPV (np.array): Net Present Value of the airport infrastructure project
+        NPV (np.array): Net Present Value of the Airport Infrastructure Project
 
     To call the function use following syntax:
         NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
@@ -1558,6 +1554,7 @@ def NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
     discount_rate = Param["discount_rate"]  # Discount rate for NPV calculation
     Initial_Investment = Param["Initial_Investment"]  # Initial investment
 
+    # If condition to adjust d_ATM shape
     if d_ATM.ndim == 2:
         d_Jet = d_ATM * (1 - S_values)  # Jet A1 aircraft demand
         d_LH = d_ATM * S_values  # LH2 aircraft demand
@@ -1567,6 +1564,7 @@ def NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
     k_Jet = Capacity_3D(Param, delta_K_Jet)  # Jet A1 aircraft stand capacity
     k_LH = Capacity_3D(Param, delta_K_LH, True)  # LH2 aircraft stand capacity
 
+    # Calculting the yearly capacit and yearly demand
     K_Jet_yearly, K_Jet_mix_yearly = K_yearly(Param, k_Jet)
     K_LH_yearly, K_LH_mix_yearly = K_yearly(Param, k_LH)
     D_Jet_yearly, D_Jet_mix_yearly = ATM_yearly(Param, d_Jet)
@@ -1601,9 +1599,9 @@ def NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
     Profit = Revenue - Cost
     # Discount per year:
     Discount = 1 / ((1 + discount_rate) ** np.arange(Profit.shape[1]))
-    # Apply discount per year to each row (scenario) — element-wise
+    # Applying the discount per year to each row (scenario) — element-wise
     Discounted_Profit = Profit * Discount
-    # Sum discounted profits over time
+    # Summing the discounted profits over time
     NPV = np.sum(Discounted_Profit, axis=1) - Initial_Investment
 
     return NPV
@@ -1615,14 +1613,14 @@ def ENPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly
 
     Parameters:
         Param (dict): Parameter Dictionary
-        delta_K_Jet (np.array): Capacity Change Vector for Jet A1
-        delta_K_LH (np.array): Capacity Change Vector for LH2
+        delta_K_Jet (np.array): Capacity Change Vector for Jet A1 Aircraft Stand Capacity
+        delta_K_LH (np.array): Capacity Change Vector for LH2 Aircraft Stand Capacity
         d_ATM (np.array): ATMs in the DHL
         S_values (np.array): S-Curve Matrix for Technology Adoption
         PAX_yearly (np.array): Number of Passengers per Year
 
     Returns:
-        ENPV (float): Expected Net Present Value of the airport infrastructure project in USD
+        ENPV (float): Expected Net Present Value of the Airport Infrastructure Project in USD
 
     To call the function use following syntax:
         ENPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
@@ -1630,54 +1628,55 @@ def ENPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly
     # Parameters
     No_Forecasts = Param["No_Forecasts"]
 
+    # If condition to adjust delta_K_Jet shape
     if delta_K_Jet.ndim == 1:
         delta_K_Jet = np.tile(delta_K_Jet, (No_Forecasts, 1))
     else:
         delta_K_Jet = delta_K_Jet
 
+    # If condition to adjust delta_K_LH shape
     if delta_K_LH.ndim == 1:
         delta_K_LH = np.tile(delta_K_LH, (No_Forecasts, 1))
     else:
         delta_K_LH = delta_K_LH
 
-    # Calculate NPV for each scenario
+    # Calculating the NPV for each scenario
     NPV = NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
-    Sum_NPV = np.sum(NPV)  # Sum of NPV values
+    Sum_NPV = np.sum(NPV)  # Summing the NPV values
 
-    ENPV = Sum_NPV / len(NPV)  # Expected NPV is the average of NPV values
+    ENPV = Sum_NPV / len(NPV)  # Expected NPV is the expected value of the NPV values
 
     return ENPV
 
 
 def GA_dual(Param, d_ATM, S_values, PAX_yearly):
     """
-    This function evolves delta_K_Jet_Mix and delta_K_LH_Mix using a genetic algorithm to maximize ENPV.
+    This function evaluates the delta_K_Jet_Mix and delta_K_LH_Mix using a genetic algorithm to maximize the ENPV.
 
     Parameters:
         Param (dict): Parameter dictionary
         d_ATM (np.array): DHL ATMs
-        S_values (np.array): S-curve technology adoption matrix
-        PAX (np.array): Passengers per year
+        S_values (np.array): S-curve Technology Adoption mMatrix
+        PAX (np.array): Passengers per Year
 
     Returns:
-        delta_K_Jet_Mix (np.array): Jet capacity change, shape (No_Forecasts, Fth, Mix)
-        delta_K_LH_Mix (np.array): LH2 capacity change, shape (No_Forecasts, Fth, Mix)
+        delta_K_Jet_Mix, delta_K_LH_Mix (np.array): Jet A1 and LH2 Aircraft Stand Capacity Change Mix Matrix
 
     To call this function use:
         GA_dual(Param, d_ATM, S_values, PAX)
     """
-    # Initialize core parameters
+    # Parameters
     value_vector = Param["allowed_values"]
     Fth = Param["Fth"] + 1
     mix_dim = len(Param["Mix"])
     n_vars = 2 * Fth * mix_dim  # Variables for Jet and LH2
 
-    # Convert 2D d_ATM to 3D by applying mix
+    # Convert 2D d_ATM to 3D by applying the Mix
     if d_ATM.ndim == 2:
         mix = np.array(Param["Mix"])
         d_ATM = d_ATM[:, :, np.newaxis] * mix[np.newaxis, np.newaxis, :]
 
-    # Register fitness and individual structures
+    # Registering the fitness and individual structures
     if "FitnessMax" not in creator.__dict__:
         creator.create("FitnessMax", base.Fitness, weights=(1.0,))
     if "Individual" not in creator.__dict__:
@@ -1685,17 +1684,17 @@ def GA_dual(Param, d_ATM, S_values, PAX_yearly):
 
     toolbox = base.Toolbox()
 
-    # Initialize a random individual from allowed values
+    # Initializing a random individual from the allowed values
     def init_individual():
         return np.array([random.choice(value_vector) for _ in range(n_vars)])
 
-    # Register GA components
+    # Registering  GA components
     toolbox.register(
         "individual", tools.initIterate, creator.Individual, init_individual
     )
     toolbox.register("population", tools.initRepeat, list, toolbox.individual)
 
-    # Mutates individual values with fixed probability
+    # Mutating individual values with fixed probability
     def mutate_individual(individual):
         for i in range(len(individual)):
             if random.random() < 0.2:
@@ -1703,20 +1702,20 @@ def GA_dual(Param, d_ATM, S_values, PAX_yearly):
 
     toolbox.register("mutate", mutate_individual)
 
-    # Evaluate individual's fitness using ENPV
+    # Evaluating individual's fitness using the ENPV function
     def evaluate(individual):
         gene_array = np.array(individual)
 
-        # Reshape flat genes into (Fth, Mix) matrices
+        # Reshapeing the flat genes into (Fth, Mix) matrices
         delta_K_Jet_Mix = gene_array[: Fth * mix_dim].reshape(Fth, mix_dim)
         delta_K_LH_Mix = gene_array[Fth * mix_dim :].reshape(Fth, mix_dim)
 
-        # Sum over mix axis → shape (Fth,)
+        # Summing over mix axis → shape (Fth,)
         delta_K_Jet = np.sum(delta_K_Jet_Mix, axis=1)
         delta_K_LH = np.sum(delta_K_LH_Mix, axis=1)
         # delta_K = delta_K_Jet + delta_K_LH
 
-        # Broadcast to (No_Forecasts, Fth, Mix) for ENPV calculation
+        # Broadcasting to (No_Forecasts, Fth, Mix) for the ENPV calculation
         delta_K_Jet_full = np.broadcast_to(delta_K_Jet_Mix, d_ATM.shape)
         delta_K_LH_full = np.broadcast_to(delta_K_LH_Mix, d_ATM.shape)
 
@@ -1729,45 +1728,45 @@ def GA_dual(Param, d_ATM, S_values, PAX_yearly):
     toolbox.register("mate", tools.cxTwoPoint)
     toolbox.register("select", tools.selTournament, tournsize=3)
 
-    # Initialize population
+    # Initializing the population
     population = toolbox.population(n=Param["population"])
     cxpb, mutpb, ngen = 0.5, 0.2, 10  # Crossover, mutation, generations
 
-    # Run GA for ngen generations
+    # Running the GA for ngen generations
     for gen in range(ngen):
         offspring = toolbox.select(population, len(population))
         offspring = list(map(toolbox.clone, offspring))
 
-        # Apply crossover
+        # Applying the crossover
         for child1, child2 in zip(offspring[::2], offspring[1::2]):
             if random.random() < cxpb:
                 toolbox.mate(child1, child2)
                 del child1.fitness.values
                 del child2.fitness.values
 
-        # Apply mutation
+        # Applying mutation
         for mutant in offspring:
             if random.random() < mutpb:
                 toolbox.mutate(mutant)
                 del mutant.fitness.values
 
-        # Evaluate invalid individuals
+        # Evaluating the invalid individuals
         invalid_ind = [ind for ind in offspring if not ind.fitness.valid]
         fitnesses = map(toolbox.evaluate, invalid_ind)
         for ind, fit in zip(invalid_ind, fitnesses):
             ind.fitness.values = fit
 
-        population[:] = offspring  # Replace population
+        population[:] = offspring  # Replacing the population
 
-    # Extract best solution
+    # Extracting the best solution
     best_ind = tools.selBest(population, 1)[0]
     gene_array = np.array(best_ind)
 
-    # Reshape best solution into (Fth, Mix)
+    # Reshaping the best solution into (Fth, Mix)
     delta_K_Jet_Mix = gene_array[: Fth * mix_dim].reshape(Fth, mix_dim)
     delta_K_LH_Mix = gene_array[Fth * mix_dim :].reshape(Fth, mix_dim)
 
-    # Expand to (No_Forecasts, Fth, Mix)
+    # Expanding shape to (No_Forecasts, Fth, Mix)
     No_Forecasts = Param["No_Forecasts"]
     delta_K_Jet_Mix_full = np.broadcast_to(
         delta_K_Jet_Mix, (No_Forecasts, Fth, mix_dim)
@@ -1779,30 +1778,34 @@ def GA_dual(Param, d_ATM, S_values, PAX_yearly):
 
 def Decision_Rule(Param, K0, d, theta, condition):
     """
-    This function creates a new delta capacity vector while considering a decision rule
-    which is previously defined.
+    This function creates a new delta capacity vector while considering a decision rule.
+    The parameters of the decision rule are given and optimized in different functions.
 
     Parameters:
         Param (dict): Parameter Dictionary
         K0 (int): Initial Capacity
         D (ndarray): Demand Matrix (2D or 3D)
-        theta (ndarray or int): Capacity Change Vector
+        theta (ndarray or int): Capacity Increase Value
         condition (int): Condition for Capacity Increase (difference of K and D)
 
     Returns:
-        delta_K_Flex (ndarray): Delta capacity vector(s) considering the decision rule
+        delta_K_Flex (ndarray): Delta Capacity Matrix Considering the Decision Rule
 
     To call the function use following syntax:
         Decision_Rule(Param, K0, d, theta, condition)
     """
+    # If condition to adjust delta_K_LH shape
     if d.ndim == 2:
         # 2D Case: (scenarios, time)
         K_Flex = np.full(d.shape, K0, dtype=d.dtype)
 
+        # Looping over Fth
         for t in range(1, d.shape[1]):
+            # Creating a difference matrix with over and under capacity conditions
             diff = K_Flex[:, t - 1] - d[:, t]
             over_capacity = np.greater_equal(diff, condition).astype(int)
             under_capacity = np.less(diff, condition).astype(int)
+            # Combining the two condition matrices
             K_Flex[:, t] = over_capacity * K_Flex[:, t - 1] + under_capacity * (
                 K_Flex[:, t - 1] + theta
             )
@@ -1810,6 +1813,7 @@ def Decision_Rule(Param, K0, d, theta, condition):
         delta_K = np.diff(K_Flex - K0, axis=1)
         delta_K_Flex = np.insert(delta_K, 0, 0, axis=1)
 
+    # If condition to adjust delta_K_LH shape
     elif d.ndim == 3:
         # 3D Case: (scenarios, time, mixes)
         K0_mix = Param["Mix"] * K0
@@ -1835,38 +1839,38 @@ def Decision_Rule(Param, K0, d, theta, condition):
 
 def Parameter_combinations(Param, n=1000, Apply_Mix=False):
     """
-    This function generates all possible combinations of parameters for the optimization process.
+    This function generates all possible combinations of parameters for the optimization process from the given ranges.
 
     Parameters:
         Param (dict): Parameter Dictionary
-        n (int): Number of samples to return
-        Apply_Mix (bool): If True, applies mix to the parameter combinations
+        n (int): Number of Random Samples to Return
+        Apply_Mix (bool): If True, Applies Mix to the Parameter Combinations
 
     Returns:
-        sampled_combinations (list): List of sampled parameter combinations
+        sampled_combinations (list): List of Sampled Parameter Combinations
 
     To call the function use following syntax:
         Parameter_combinations(Param, n=1000, Apply_Mix=False)
     """
-    # Theta
+    # Theta -> Capacity Increase Value
     lower_theta = Param["lower_theta"]
     upper_theta = Param["upper_theta"]
     stepsize_theta = Param["stepsize_theta"]
 
-    # Condition
+    # Condition -> Capacity Increase Condition (K - D)
     lower_cond = Param["lower_condition"]
     upper_cond = Param["upper_condition"]
     stepsize_cond = Param["stepsize_condition"]
 
-    #   Define integer ranges for each variable (inclusive)
+    #  Defining integer ranges for each variable (inclusive)
     theta_Jet = np.arange(lower_theta, upper_theta + stepsize_theta, stepsize_theta)
     condition_Jet = np.arange(lower_cond, upper_cond + stepsize_cond, stepsize_cond)
-    # LH2
+    # Copying the ranges for the LH2 case
     theta_LH = theta_Jet
     condition_LH = condition_Jet
 
     if Apply_Mix == False:
-        # Generate all possible combinations
+        # Generating all possible combinations
         all_combinations = list(
             itertools.product(
                 theta_Jet,
@@ -1907,7 +1911,7 @@ def Parameter_Evaluation(
 ):
     """
     This function evaluates the expected net present value (ENPV) for different parameter
-    combinations and returns the maximum ENPV along with the best parameter combination.
+    combinations for the decision rule function and returns the maximum ENPV along with the best parameter combination.
 
     Parameters:
         Param (dict): Parameter Dictionary
@@ -1916,17 +1920,17 @@ def Parameter_Evaluation(
         d_ATM_mix (np.array): Total ATMs with Mix in the DHL
         S_values (np.array): S-Curve Matrix for Technology Adoption
         PAX_yearly (np.array): Number of Passengers per Year
-        n (int): Number of samples to return
-        Apply_Mix (bool): If True, applies mix to the parameter combinations
+        n (int): Number of Samples to Return
+        Apply_Mix (bool): If True, Applies Mix to the Parameter Combinations
 
     Returns:
-        max_enpv (float): Maximum ENPV value
-        best_params (tuple): Best parameter combination that yields the maximum ENPV
+        max_enpv (float): Maximum ENPV Value
+        best_params (tuple): Best Parameter Combination that Yields the Maximum ENPV
 
     To call the function use following syntax:
-        Parameter_Evaluation(Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly,
-        n=1000, Apply_Mix=False)
+        Parameter_Evaluation(Param, d_ATM_Jet, d_ATM_LH, d_ATM_mix, S_values, PAX_yearly, n, Apply_Mix)
     """
+    # Parameters
     max_enpv = -np.inf
     best_params = None
     Mix = Param["Mix"]
@@ -1934,11 +1938,13 @@ def Parameter_Evaluation(
     K0_LH = Param["K0_LH"]
     Optimization_parameters = Parameter_combinations(Param, n, Apply_Mix)
 
+    # If condition to check d_ATM_Jet shape
     if Apply_Mix == False:
         for sample in Optimization_parameters:
+            # Applying the decision rule to calculate delta_K_Jet and delta_K_LH
             delta_K_Jet = Decision_Rule(Param, K0, d_ATM_Jet, sample[0], sample[1])
             delta_K_LH = Decision_Rule(Param, K0_LH, d_ATM_LH, sample[2], sample[3])
-
+            # Calculating the ENPV for the current parameter combination
             ENPV = ENPV_calculation(
                 Param,
                 delta_K_Jet,
@@ -1947,10 +1953,12 @@ def Parameter_Evaluation(
                 S_values,
                 PAX_yearly,
             )
+            # Updating the maximum ENPV and best parameters if the current ENPV is greater
             if ENPV > max_enpv:
                 max_enpv = ENPV
                 best_params = sample
 
+    # If condition to check d_ATM_Jet shape
     if Apply_Mix == True:
         for sample in Optimization_parameters:
             delta_K_Jet_short = Decision_Rule(
@@ -1994,17 +2002,16 @@ def Parameter_Evaluation(
 
 def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
     """
-    This function is Plotting the Cumulative Density Function of the NPVs
-    Args:
+    This function is plotting the Cumulative Density Function of the NPVs
+
+    Parameters:
         Vector1 (ndarray): Input Vector 1
         Vector2 (ndarray): Input Vector 2
-        label1 (str): First CDF Curve
-        label2 (str): Second CDF Curve
-        label3 (str): First ENPV Value
-        label4 (str): Second ENPV Value
+        label1 (str): Label for the First CDF Curve
+        label2 (str): Label for the Second CDF Curve
 
     Returns:
-        Plot of all input Vectors in a CDF Graphic
+        None: Plot of all Input Vectors in a CDF Graphic
         + Visualisation of the 10th, 90th Percentile of the Input Vectors
 
     To call this Function use following syntax:
@@ -2075,7 +2082,7 @@ def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
         label="10th Percentile",
     )
 
-    # Add crosshair at the specified point
+    # Adding crosshair at the specified points
     ax.plot(percentile_90a, 0.9, marker="X", color="black", markersize=6)
     ax.plot(percentile_10a, 0.1, marker="X", color="black", markersize=6)
     ax.plot(percentile_90b, 0.9, marker="X", color="black", markersize=6)
