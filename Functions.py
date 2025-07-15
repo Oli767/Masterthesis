@@ -828,7 +828,7 @@ def Capacity_2D(Param, delta_K, adjustK0=False):
         K (np.array): Capacity Vectors in 2D shape
 
     To call the function use following syntax:
-        Capacity(Param, delta_K)
+        Capacity_2D(Param, delta_K)
     """
     # Parameters
     K0 = Param["K0"]  # Initial Capacity of Jet A1 aircraft stands
@@ -870,7 +870,7 @@ def Capacity_3D(Param, delta_K, adjustK0=False):
         K (np.array): Capacity Vector or Matrix Depending on the Matrix Parameter.
 
     To call the function use following syntax:
-        Capacity(Param, delta_K)
+        Capacity_3D(Param, delta_K)
     """
     # Parameters
     K0 = Param["K0"] * Param["Mix"]  # Initial Capacity of Jet A1 aircraft stands
