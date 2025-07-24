@@ -671,7 +671,7 @@ def exponential_matrix(Param):
     # Parameters
     Fth = Param["Fth"] + 1
     No_Forecasts = Param["No_Forecasts"]
-    Average_step = Param["dt"]
+    scale_up = Param["scale_up"]
     p_down = Param["p_down"]
     scale_down = Param["scale_down"]
     offset_scale = Param["Fth"] * Param["S_curve_offset"] / 100
@@ -680,7 +680,7 @@ def exponential_matrix(Param):
     np.random.seed(Param["seed"])
 
     # Generating positive and negative steps
-    pos_steps = np.random.exponential(scale=Average_step, size=(No_Forecasts, Fth - 1))
+    pos_steps = np.random.exponential(scale=scale_up, size=(No_Forecasts, Fth - 1))
     neg_steps = np.random.exponential(scale=scale_down, size=(No_Forecasts, Fth - 1))
 
     # Creating a mask for negative steps
