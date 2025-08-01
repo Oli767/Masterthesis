@@ -720,15 +720,15 @@ def S_curve(Param):
     k = Param["k"]
 
     # Generating an exponential matrix
+    # The matrix contains the time steps for each forecast
     matrix = exponential_matrix(Param)
 
-    # Computing the S-Curve Values with Zero Offset Period
-    S_values_matrix = np.zeros_like(matrix)
-    S_values_matrix[:, :] = L / (1 + np.exp(-k * (matrix[:, :] - t0)))
+    # Base sigmoid without scaling
+    sigmoid = 1 / (1 + np.exp(-k * (matrix - t0)))
 
-    # Correcting the S-Curve Values to Eliminate the non-zero baseline at time = 0
-    S_values_correction = L / (1 + np.exp(-k * (0 - t0)))
-    S_values_matrix = S_values_matrix - S_values_correction
+    # Normalize so that S(0) = 0 and S(∞) = L
+    f0 = 1 / (1 + np.exp(k * t0))  # value at t=0
+    S_values_matrix = L * (sigmoid - f0) / (1 - f0)
 
     return S_values_matrix
 
@@ -752,7 +752,15 @@ def S_curve_plot(Param, S_Values):
     # Parameters
     Fth = Param["Fth"] + 1
     time = Param["time"]
-    S = Param["L"] / (1 + np.exp(-Param["k"] * (time - (Param["t0_factor"] * Fth))))
+    L = Param["L"]
+    k = Param["k"]
+    t0 = Param["t0_factor"]
+    t0_val = t0 * Fth
+
+    # Normalized sigmoid curve
+    sigmoid = 1 / (1 + np.exp(-k * (time - t0_val)))
+    f0 = 1 / (1 + np.exp(k * t0_val))  # sigmoid value at time = 0
+    S = L * (sigmoid - f0) / (1 - f0)
 
     # Setting the random seed for reproducibility
     np.random.seed(Param["seed"])
@@ -2095,4 +2103,12 @@ def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
     ax.legend()
     plt.show()
     percentiles = [percentile_10a, percentile_90a, percentile_10b, percentile_90b]
+    means = [mean1, mean2]
+    print(
+        f"10th Percentile {label1}: {percentile_10a}, 90th Percentile {label1}: {percentile_90a}"
+    )
+    print(
+        f"10th Percentile {label2}: {percentile_10b}, 90th Percentile {label2}: {percentile_90b}"
+    )
+    print(f" {label1}: {mean1}, {label2}: {mean2}")
     return percentiles
