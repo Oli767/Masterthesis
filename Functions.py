@@ -342,17 +342,19 @@ def ATM_yearly(Param, Scenario):
 
 def K_yearly(Param, Capacity):
     """
-    This function calculates the yearly capacity based on the given parameters and the capacity matrix.
+    This function calculates the yearly capacity based on the given parameters and the DHL capacity matrix.
 
      Parameters:
          Param (dict): Parameter Dictionary
-         Capacity (ndarray): Capacity Matrix
+         Capacity (ndarray): DHL Capacity Matrix
 
      Returns:
          K_yearly, K_yearly_mix (ndarray): Yearly capacity matrices
     """
     # Parameters
     Mix = Param["Mix"]
+    DHL_F = Param["DHL_Factors"] / 100
+    limit = Param["K_Yearly_Limits"]
 
     # Checking dimensions of Capacity
     if Capacity.ndim == 2:
@@ -362,13 +364,22 @@ def K_yearly(Param, Capacity):
     else:
         raise ValueError("Capacity must be a 2D or 3D array.")
 
-    # Calculating the yearly capacity by appling the DHL Factors (so far only 0.03)
-    K_yearly = Capacity / (0.03 / 100)
+    # Creating the index matrix with the DHL Factors where the condition is met, else 0
+    index_1 = ((Capacity >= limit[0]) & (Capacity < limit[1])).astype(int) * DHL_F[0]
+    index_2 = ((Capacity >= limit[1]) & (Capacity < limit[2])).astype(int) * DHL_F[1]
+    index_3 = ((Capacity >= limit[2]) & (Capacity < limit[3])).astype(int) * DHL_F[2]
+    index_4 = (Capacity >= limit[3]).astype(int) * DHL_F[3]
+
+    # Summing the index matrices to get the final index matrix
+    index_matrix = sum([index_1, index_2, index_3, index_4])
+
+    # Calculating the yearly capacity K by dividing the DHL capacity with the index matrix
+    K_yearly = Capacity / index_matrix
 
     # Applying the Mix to the yearly capacity matrix
     K_yearly_mix = K_yearly[:, :, np.newaxis] * Mix
 
-    return K_yearly, K_yearly_mix
+    return np.round(K_yearly, 0), np.round(K_yearly_mix, 0)
 
 
 def Model(t, D0, mu, sigma):
@@ -2102,13 +2113,10 @@ def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
     ax.set_ylabel("Cumulative Probability [%]")
     ax.legend()
     plt.show()
-    percentiles = [percentile_10a, percentile_90a, percentile_10b, percentile_90b]
-    means = [mean1, mean2]
-    print(
-        f"10th Percentile {label1}: {percentile_10a}, 90th Percentile {label1}: {percentile_90a}"
-    )
-    print(
-        f"10th Percentile {label2}: {percentile_10b}, 90th Percentile {label2}: {percentile_90b}"
-    )
-    print(f" {label1}: {mean1}, {label2}: {mean2}")
-    return percentiles
+    print(f"10th Percentile {label1}: {percentile_10a}")
+    print(f"90th Percentile {label1}: {percentile_90a}")
+    print(f"10th Percentile {label2}: {percentile_10b}")
+    print(f"90th Percentile {label2}: {percentile_90b}")
+    print(f"{label1}: {mean1}")
+    print(f"{label2}: {mean2}")
+    return
