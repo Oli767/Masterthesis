@@ -6,6 +6,9 @@ import matplotlib.pyplot as plt
 from deap import base, creator, tools
 import itertools
 
+# Import of Packages for Data Handling
+import os
+
 # Import of Packages for Optimization
 import scipy.optimize as opt
 
@@ -47,16 +50,90 @@ def Generate_scenarios(Param):
     return np.round(D, 0)
 
 
+# def Scenario_plot(
+#     Param,
+#     Scenarios,
+#     NoStep=True,
+#     Title="Demand Scenarios",
+#     label="Passenger Numbers",
+# ):
+#     """
+#     This function plots any data vector or matrix against the forecast time
+#     horizon vector Fth, allowing visualization of a selected number (n) of plots.
+
+#     Parameters:
+#         Param (dict): Parameter Dictionary
+#         Scenarios (ndarray): Scenario (Plotting) Data
+#         NoStep (bool): If True, uses a Line pPlot; Otherwise, a Step Plot
+#         Title (str): Title of the plot
+#         label (str): Y-Axis Description of the Plot
+
+#     Returns:
+#         None: Displays the Plot
+
+#     To call the function use following syntax:
+#         Scenario_plot(Param, Scenarios, NoStep, Title, label)
+#     """
+#     # Parameters
+#     Fth = Param["Fth"] + 1
+#     n = Param["No_Forecasts_plot"]
+#     colors = ["blue", "green", "red"]  # Define colors for the last dimension
+
+#     # Setting the random seed for reproducibility
+#     np.random.seed(Param["seed"])
+
+#     if isinstance(Scenarios, tuple):
+#         raise TypeError(
+#             "Scenarios is a Tuple! Please provide a NumPy array. At the function call Shock_generation the value of display should be set to false!"
+#         )
+
+#     # Checking if the input is 1D, if so reshaping to 2D
+#     if Scenarios.ndim == 1:
+#         Scenarios = Scenarios.reshape(1, -1)
+
+#     indices = np.random.choice(Scenarios.shape[0], size=n)
+#     Small_Scenario = Scenarios[indices]
+#     plotvector = np.arange(Fth)
+
+#     # Checking if the input is 3D
+#     if Small_Scenario.ndim == 3 and Small_Scenario.shape[2] == 3:
+#         for i in range(3):
+#             for scenario in Small_Scenario[:, :, i]:
+#                 if NoStep:
+#                     plt.plot(plotvector, scenario, color=colors[i], alpha=0.5)
+#                 else:
+#                     plt.step(
+#                         plotvector, scenario, where="post", color=colors[i], alpha=0.5
+#                     )
+#     else:
+#         for scenario in Small_Scenario:
+#             if NoStep:
+#                 plt.plot(plotvector, scenario, label="Scenario")
+#             else:
+#                 plt.step(plotvector, scenario, where="post", label="Scenario")
+
+#     plt.grid(True)
+#     plt.xlabel("Years")
+#     plt.ylabel(label)
+#     plt.title(Title)
+#     plt.show()
+
+
 def Scenario_plot(
     Param,
     Scenarios,
     NoStep=True,
     Title="Demand Scenarios",
     label="Passenger Numbers",
+    save_plot=False,
+    run_name="Unnamed_Run",
+    output_base_folder="Plots",
 ):
     """
     This function plots any data vector or matrix against the forecast time
     horizon vector Fth, allowing visualization of a selected number (n) of plots.
+    Additionally, it saves the plot to a specified folder named after the run.
+    The function automatically avoids overwriting saved plots by incrementing filenames.
 
     Parameters:
         Param (dict): Parameter Dictionary
@@ -64,21 +141,25 @@ def Scenario_plot(
         NoStep (bool): If True, uses a Line pPlot; Otherwise, a Step Plot
         Title (str): Title of the plot
         label (str): Y-Axis Description of the Plot
+        save_plot (bool): If True, saves the plot to a file
+        output_base_folder (str): Base folder for saving plots, default is "Plots"
 
     Returns:
-        None: Displays the Plot
+        None: Displays the Plot, if save_plot is True, saves the plot to a file.
 
     To call the function use following syntax:
-        Scenario_plot(Param, Scenarios, NoStep, Title, label)
+        Scenario_plot(Param, Scenarios, NoStep, Title, label, save_plot, output_base_folder)
     """
+
     # Parameters
     Fth = Param["Fth"] + 1
     n = Param["No_Forecasts_plot"]
-    colors = ["blue", "green", "red"]  # Define colors for the last dimension
+    colors = ["blue", "green", "red"]
 
     # Setting the random seed for reproducibility
     np.random.seed(Param["seed"])
 
+    # Validating the scenario input shape
     if isinstance(Scenarios, tuple):
         raise TypeError(
             "Scenarios is a Tuple! Please provide a NumPy array. At the function call Shock_generation the value of display should be set to false!"
@@ -91,6 +172,9 @@ def Scenario_plot(
     indices = np.random.choice(Scenarios.shape[0], size=n)
     Small_Scenario = Scenarios[indices]
     plotvector = np.arange(Fth)
+
+    # Create figure
+    plt.figure()
 
     # Checking if the input is 3D
     if Small_Scenario.ndim == 3 and Small_Scenario.shape[2] == 3:
@@ -105,14 +189,37 @@ def Scenario_plot(
     else:
         for scenario in Small_Scenario:
             if NoStep:
-                plt.plot(plotvector, scenario, label="Scenario")
+                plt.plot(plotvector, scenario)
             else:
-                plt.step(plotvector, scenario, where="post", label="Scenario")
+                plt.step(plotvector, scenario, where="post")
 
     plt.grid(True)
     plt.xlabel("Years")
     plt.ylabel(label)
     plt.title(Title)
+
+    # Saving the plot
+    if save_plot:
+        # Folder: Plots/run_name/
+        folder_path = os.path.join(output_base_folder, run_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+        # Createing a safe filename
+        filename_safe_title = Title.replace(" ", "_").replace("/", "_")
+        base_filename = f"{filename_safe_title}.png"
+        plot_path = os.path.join(folder_path, base_filename)
+
+        # Checking for duplicates and increment
+        counter = 1
+        while os.path.exists(plot_path):
+            base_filename = f"{filename_safe_title}_{counter}.png"
+            plot_path = os.path.join(folder_path, base_filename)
+            counter += 1
+
+        # Saving the figure
+        plt.savefig(plot_path)
+        print(f"Plot saved to: {os.path.abspath(plot_path)}")
+
     plt.show()
 
 
@@ -744,22 +851,83 @@ def S_curve(Param):
     return S_values_matrix
 
 
-def S_curve_plot(Param, S_Values):
+# def S_curve_plot(Param, S_Values):
+#     """
+#     This function plots the set S-Curve with a set of randomly choosen S-Curve values from the
+#     exponential_matrix and S_curve functions.
+
+#     Parameters:
+#         Param (dict): Parameter Dictionary
+#         S_Values (ndarray): S-Curve values Matrix
+
+#     Returns:
+#         None: Plot of the S-Curve and a Random set of the S-Curve Values
+
+#     To call the function use following syntax:
+#         S_curve_plot(Param, S_Values)
+
+#     """
+#     # Parameters
+#     Fth = Param["Fth"] + 1
+#     time = Param["time"]
+#     L = Param["L"]
+#     k = Param["k"]
+#     t0 = Param["t0_factor"]
+#     t0_val = t0 * Fth
+
+#     # Normalized sigmoid curve
+#     sigmoid = 1 / (1 + np.exp(-k * (time - t0_val)))
+#     f0 = 1 / (1 + np.exp(k * t0_val))  # sigmoid value at time = 0
+#     S = L * (sigmoid - f0) / (1 - f0)
+
+#     # Setting the random seed for reproducibility
+#     np.random.seed(Param["seed"])
+
+#     plt.figure(figsize=(10, 6))
+#     plt.plot(time, S, label="S-Curve", color="blue")
+
+#     # Randomly selecting indices to plot
+#     No_Forecasts_plot = min(Param["No_Forecasts_plot"], Param["No_Forecasts"])
+#     selected_indices = np.random.choice(
+#         S_Values.shape[0], No_Forecasts_plot, replace=False
+#     )
+
+#     # Ploting the selected forecasts
+#     plt.plot(time, S_Values[selected_indices].T, alpha=0.7)
+#     plt.xlabel("Time [yrs]")
+#     plt.ylabel("Percentage [%]")
+#     plt.legend()
+#     plt.grid()
+#     plt.title("Technology Adoption with Standard S-Curve")
+#     plt.show()
+
+
+def S_curve_plot(
+    Param,
+    S_Values,
+    save_plot=False,
+    run_name="Undefined_Run",
+    output_base_folder="Plots",
+):
     """
-    This function plots the set S-Curve with a set of randomly choosen S-Curve values from the
-    exponential_matrix and S_curve functions.
+    This function calculates S-Curve values according to the set parameters and the
+    matrix from the exponential_matrix function.
+    Additionally, it saves the plots the S-Curve if the save_plot parameter is set to True.
 
     Parameters:
         Param (dict): Parameter Dictionary
         S_Values (ndarray): S-Curve values Matrix
+        run_name (str): Name of the current run (used to create the saving folder)
+        save_plot (bool): Whether to save the plot
+        output_base_folder (str): Base directory for saving plots
 
     Returns:
-        None: Plot of the S-Curve and a Random set of the S-Curve Values
+        S_values_matrix (ndarray): S-Curve Values Matrix
 
     To call the function use following syntax:
-        S_curve_plot(Param, S_Values)
-
+        S_curve(Param, S_Values, save_plot=False, run_name="Undefined_Run", output_base_folder="Plots")
     """
+
     # Parameters
     Fth = Param["Fth"] + 1
     time = Param["time"]
@@ -773,25 +941,45 @@ def S_curve_plot(Param, S_Values):
     f0 = 1 / (1 + np.exp(k * t0_val))  # sigmoid value at time = 0
     S = L * (sigmoid - f0) / (1 - f0)
 
-    # Setting the random seed for reproducibility
+    # Setting seed for reproducibility
     np.random.seed(Param["seed"])
 
+    # Plotting
     plt.figure(figsize=(10, 6))
     plt.plot(time, S, label="S-Curve", color="blue")
 
-    # Randomly selecting indices to plot
+    # Selecting random forecast paths
     No_Forecasts_plot = min(Param["No_Forecasts_plot"], Param["No_Forecasts"])
     selected_indices = np.random.choice(
         S_Values.shape[0], No_Forecasts_plot, replace=False
     )
-
-    # Ploting the selected forecasts
     plt.plot(time, S_Values[selected_indices].T, alpha=0.7)
+
     plt.xlabel("Time [yrs]")
     plt.ylabel("Percentage [%]")
     plt.legend()
     plt.grid()
     plt.title("Technology Adoption with Standard S-Curve")
+
+    # Saving the plot
+    if save_plot:
+        folder_path = os.path.join(output_base_folder, run_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+        # Preparing a safe file name and avoiding overwrites
+        filename_safe_title = "S_Curve_Plot"
+        base_filename = f"{filename_safe_title}.png"
+        plot_path = os.path.join(folder_path, base_filename)
+
+        counter = 1
+        while os.path.exists(plot_path):
+            base_filename = f"{filename_safe_title}_{counter}.png"
+            plot_path = os.path.join(folder_path, base_filename)
+            counter += 1
+
+        plt.savefig(plot_path)
+        print(f"S-Curve plot saved to: {os.path.abspath(plot_path)}")
+
     plt.show()
 
 
@@ -2019,7 +2207,119 @@ def Parameter_Evaluation(
     return max_enpv, best_params
 
 
-def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
+# def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
+#     """
+#     This function is plotting the Cumulative Density Function of the NPVs
+
+#     Parameters:
+#         Vector1 (ndarray): Input Vector 1
+#         Vector2 (ndarray): Input Vector 2
+#         label1 (str): Label for the First CDF Curve
+#         label2 (str): Label for the Second CDF Curve
+
+#     Returns:
+#         None: Plot of all Input Vectors in a CDF Graphic
+#         + Visualisation of the 10th, 90th Percentile of the Input Vectors
+
+#     To call this Function use following syntax:
+#         CDF_Plot(Vector1, Vector2, label1, label2, label3, label4)
+#     """
+#     percentile_10a = np.percentile(Vector1, 10)
+#     percentile_90a = np.percentile(Vector1, 90)
+#     percentile_10b = np.percentile(Vector2, 10)
+#     percentile_90b = np.percentile(Vector2, 90)
+
+#     # Creating a subplot
+#     fig, ax = plt.subplots()
+
+#     # Step plot code with specific values
+#     ax.plot(
+#         np.sort(Vector1),
+#         np.arange(1, len(Vector1) + 1) / float(len(Vector1)),
+#         linestyle="-",
+#         label=label1 + " CDF Curve",
+#         linewidth=2,
+#         color="green",
+#         alpha=0.7,
+#     )
+
+#     ax.plot(
+#         np.sort(Vector2),
+#         np.arange(1, len(Vector2) + 1) / float(len(Vector2)),
+#         linestyle="-",
+#         label=label2 + " CDF Curve",
+#         linewidth=2,
+#         color="blue",
+#         alpha=0.7,
+#     )
+
+#     mean1 = np.mean(Vector1)
+#     Vector3 = np.full_like(Vector1, mean1)
+#     ax.plot(
+#         np.sort(Vector3),
+#         np.arange(1, len(Vector3) + 1) / float(len(Vector3)),
+#         linestyle="--",
+#         label=label1 + " ENPV",
+#         linewidth=2,
+#         color="green",
+#         alpha=0.7,
+#     )
+#     mean2 = np.mean(Vector2)
+#     Vector4 = np.full_like(Vector2, mean2)
+#     ax.plot(
+#         np.sort(Vector4),
+#         np.arange(1, len(Vector4) + 1) / float(len(Vector4)),
+#         linestyle="-.",
+#         label=label2 + " ENPV",
+#         linewidth=2,
+#         color="blue",
+#         alpha=0.7,
+#     )
+#     ax.axhline(
+#         0.9,
+#         color="orange",
+#         linestyle="--",
+#         label="90th Percentile",
+#     )
+
+#     ax.axhline(
+#         0.1,
+#         color="red",
+#         linestyle="-.",
+#         label="10th Percentile",
+#     )
+
+#     # Adding crosshair at the specified points
+#     ax.plot(percentile_90a, 0.9, marker="X", color="black", markersize=6)
+#     ax.plot(percentile_10a, 0.1, marker="X", color="black", markersize=6)
+#     ax.plot(percentile_90b, 0.9, marker="X", color="black", markersize=6)
+#     ax.plot(percentile_10b, 0.1, marker="X", color="black", markersize=6)
+
+
+#     ax.grid(True)
+#     ax.set_title("Cumulative Distribution Function (CDF)")
+#     ax.set_xlabel("NPVs")
+#     ax.set_ylabel("Cumulative Probability [%]")
+#     ax.legend()
+#     plt.show()
+#     print(f"10th Percentile {label1}: {percentile_10a}")
+#     print(f"90th Percentile {label1}: {percentile_90a}")
+#     print(f"10th Percentile {label2}: {percentile_10b}")
+#     print(f"90th Percentile {label2}: {percentile_90b}")
+#     print(f"{label1}: {mean1}")
+#     print(f"{label2}: {mean2}")
+#     return
+
+
+def CDF_Plot(
+    Vector1,
+    Vector2,
+    label1="Vector1",
+    label2="Vector2",
+    save_plot=False,
+    run_name="Unnamed_Run",
+    output_base_folder="Plots",
+):
     """
     This function is plotting the Cumulative Density Function of the NPVs
 
@@ -2028,6 +2328,9 @@ def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
         Vector2 (ndarray): Input Vector 2
         label1 (str): Label for the First CDF Curve
         label2 (str): Label for the Second CDF Curve
+        save_plot (bool): If True, saves the plot to a file
+        run_name (str): Name of the run for saving the plot
+        output_base_folder (str): Base folder to save the plot
 
     Returns:
         None: Plot of all Input Vectors in a CDF Graphic
@@ -2112,6 +2415,27 @@ def CDF_Plot(Vector1, Vector2, label1="Vector1", label2="Vector2"):
     ax.set_xlabel("NPVs")
     ax.set_ylabel("Cumulative Probability [%]")
     ax.legend()
+
+    # SAVE the plot if requested
+    if save_plot and run_name is not None:
+        import os
+
+        folder_path = os.path.join(output_base_folder, run_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+        filename_safe_title = "CDF_Plot"
+        base_filename = f"{filename_safe_title}.png"
+        plot_path = os.path.join(folder_path, base_filename)
+
+        counter = 1
+        while os.path.exists(plot_path):
+            base_filename = f"{filename_safe_title}_{counter}.png"
+            plot_path = os.path.join(folder_path, base_filename)
+            counter += 1
+
+        plt.savefig(plot_path)
+        print(f"CDF plot saved to: {os.path.abspath(plot_path)}")
+
     plt.show()
     print(f"10th Percentile {label1}: {percentile_10a}")
     print(f"90th Percentile {label1}: {percentile_90a}")
