@@ -126,7 +126,7 @@ def Scenario_plot(
     Title="Demand Scenarios",
     label="Passenger Numbers",
     save_plot=False,
-    run_name="Unnamed_Run",
+    run_name="Undefined_Run",
     output_base_folder="Plots",
 ):
     """
@@ -194,7 +194,7 @@ def Scenario_plot(
                 plt.step(plotvector, scenario, where="post")
 
     plt.grid(True)
-    plt.xlabel("Years")
+    plt.xlabel("Years [yrs]")
     plt.ylabel(label)
     plt.title(Title)
 
@@ -206,13 +206,13 @@ def Scenario_plot(
 
         # Createing a safe filename
         filename_safe_title = Title.replace(" ", "_").replace("/", "_")
-        base_filename = f"{filename_safe_title}.png"
+        base_filename = f"{filename_safe_title}.pdf"
         plot_path = os.path.join(folder_path, base_filename)
 
         # Checking for duplicates and increment
         counter = 1
         while os.path.exists(plot_path):
-            base_filename = f"{filename_safe_title}_{counter}.png"
+            base_filename = f"{filename_safe_title}_{counter}.pdf"
             plot_path = os.path.join(folder_path, base_filename)
             counter += 1
 
@@ -221,6 +221,125 @@ def Scenario_plot(
         print(f"Plot saved to: {os.path.abspath(plot_path)}")
 
     plt.show()
+
+
+# def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
+#     """
+#     This function simulates a demand shock and recovery process over a forecast period for multiple vectors
+#     by calling the Shock_vector function multiple times
+
+#     Parameters:
+#         Param (dict): Parameter Dictionary
+#         Forecast (np.array): Time Series Forecast Data
+#         num_shocks (int): Number of shocks (optional)
+#         display (bool): Display Number of Shocks -> Creates a Tuple -> Not for Suitable for Plotting Function
+
+#     Returns:
+#         Forecast_input (np.array): Updated Forecast with Shocks and Recovery Adjustments
+
+#     To call the function use following syntax:
+#         Shock_generation(Param, Forecast, num_shocks, display)
+#     """
+
+#     # Setting the random seed for reproducibility
+#     np.random.seed(Param["seed"])
+
+#     if (
+#         len(Forecast_input.shape) == 1
+#     ):  # If Forecast is a single vector, apply shock normally
+#         return Shock_vector(Param, Forecast_input)
+
+#     num_vectors = Forecast_input.shape[0]
+
+#     # Determining number of vectors with shocks (default: exponential distribution)
+#     if num_shocks is None:
+#         num_shocks = min(
+#             num_vectors, max(1, int(np.random.exponential(scale=Param["num_shocks"])))
+#         )
+
+#     # Randomly selecting `num_shocks` vectors to apply the shock
+#     chosen_vectors = np.random.choice(num_vectors, size=num_shocks, replace=False)
+
+#     for vector_index in chosen_vectors:
+#         Forecast_input[vector_index] = Shock_vector(Param, Forecast_input[vector_index])
+
+#     if display == True:
+#         return Forecast_input, num_shocks
+#     else:
+#         return Forecast_input
+
+
+# def Shock_vector(Param, Forecast_vector):
+#     """
+#     This function applies a demand shock and recovery process to a single given forecast vector.
+
+#     Parameters:
+#         Param (dict): Parameter Dictionary
+#         Forecast_vector (np.array): Given Vector to Apply a Shock
+
+#     Returns:
+#         Forecast_vector (np.array): Updated forecast vector with shock and recovery adjustments.
+
+#     To call the function use following syntax:
+#         Shock_vector(Param, Forecast_vector)
+#     """
+#     # Parameters
+#     shock_time_scale = Param["shock_scale"]
+#     recovery_time_scale = Param["recovery_scale"]
+#     recovery_time_sigma = Param["recovery_sigma"]
+#     shock_drop_scale = Param["shock_drop_scale"]
+#     recovery_steepness = Param["recovery_steepness"]
+
+#     # Using independent RNG for randomness per vector
+#     rng = np.random.default_rng(Param["seed"])
+
+#     # Calculating shock duration
+#     duration_shock = min(
+#         max(int(rng.exponential(scale=shock_time_scale) + 1), 2), int(Param["Fth"] / 2)
+#     )  # Randomizing shock duration
+#     duration_recovery = min(
+#         max(
+#             int(
+#                 np.round(
+#                     rng.lognormal(mean=recovery_time_scale, sigma=recovery_time_sigma)
+#                 )
+#             ),
+#             2,
+#         ),
+#         Param["Fth"] - duration_shock,
+#     )
+#     # Randomizing shock recovery
+#     duration_combined = duration_shock + duration_recovery
+#     duration = min(Param["Fth"], duration_combined)
+
+#     # Determining start index for the shock event
+#     max_start_index = len(Forecast_vector) - duration
+#     start_index = rng.integers(0, max_start_index)
+
+#     # Determining the shock and recovery parameters
+#     D0 = Forecast_vector[start_index]  # Initial demand value before shock
+#     target = Forecast_vector[start_index + duration]  # Target demand after recovery
+
+#     # Calculating the shock
+#     shock_drop = Param["Dt0"] * (shock_drop_scale / 100)
+#     delta_demand = max(
+#         -rng.exponential(scale=shock_drop), -D0
+#     )  # Randomizing shock intensity
+#     raw_splits = np.sort(rng.uniform(0, 1, duration_shock - 1))
+#     raw_splits = np.insert(raw_splits, 0, 0)
+#     raw_splits = np.append(raw_splits, 1)
+#     shock_vector = D0 + delta_demand * raw_splits
+
+#     # Calculating the shock recovery
+#     k = abs(rng.normal(loc=recovery_steepness, scale=0.1))  # Random recovery rate
+#     t = np.arange(1, duration_recovery)
+#     recovery_vector = target - (target - D0) * np.exp(-k * t)
+
+#     # Combining the shock and the shock recovery
+#     combined_vector = np.round(np.concatenate((shock_vector, recovery_vector)), 2)
+#     Forecast_vector[start_index : start_index + duration] = combined_vector
+
+#     return Forecast_vector
 
 
 def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
@@ -241,27 +360,29 @@ def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
         Shock_generation(Param, Forecast, num_shocks, display)
     """
 
-    # Setting the random seed for reproducibility
-    np.random.seed(Param["seed"])
+    # Creating a seeded random number generator for reproducibility
+    rng = np.random.default_rng(Param["seed"])
 
     if (
         len(Forecast_input.shape) == 1
     ):  # If Forecast is a single vector, apply shock normally
-        return Shock_vector(Param, Forecast_input)
+        return Shock_vector(Param, Forecast_input, rng)
 
     num_vectors = Forecast_input.shape[0]
 
     # Determining number of vectors with shocks (default: exponential distribution)
     if num_shocks is None:
         num_shocks = min(
-            num_vectors, max(1, int(np.random.exponential(scale=Param["num_shocks"])))
+            num_vectors, max(1, int(rng.exponential(scale=Param["num_shocks"])))
         )
 
     # Randomly selecting `num_shocks` vectors to apply the shock
-    chosen_vectors = np.random.choice(num_vectors, size=num_shocks, replace=False)
+    chosen_vectors = rng.choice(num_vectors, size=num_shocks, replace=False)
 
     for vector_index in chosen_vectors:
-        Forecast_input[vector_index] = Shock_vector(Param, Forecast_input[vector_index])
+        Forecast_input[vector_index] = Shock_vector(
+            Param, Forecast_input[vector_index], rng
+        )
 
     if display == True:
         return Forecast_input, num_shocks
@@ -269,19 +390,20 @@ def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
         return Forecast_input
 
 
-def Shock_vector(Param, Forecast_vector):
+def Shock_vector(Param, Forecast_vector, rng):
     """
     This function applies a demand shock and recovery process to a single given forecast vector.
 
     Parameters:
         Param (dict): Parameter Dictionary
         Forecast_vector (np.array): Given Vector to Apply a Shock
+        rng (np.random.Generator): A seeded NumPy random number generator instance
 
     Returns:
         Forecast_vector (np.array): Updated forecast vector with shock and recovery adjustments.
 
     To call the function use following syntax:
-        Shock_vector(Param, Forecast_vector)
+        Shock_vector(Param, Forecast_vector, rng)
     """
     # Parameters
     shock_time_scale = Param["shock_scale"]
@@ -289,9 +411,6 @@ def Shock_vector(Param, Forecast_vector):
     recovery_time_sigma = Param["recovery_sigma"]
     shock_drop_scale = Param["shock_drop_scale"]
     recovery_steepness = Param["recovery_steepness"]
-
-    # Using independent RNG for randomness per vector
-    rng = np.random.default_rng()
 
     # Calculating shock duration
     duration_shock = min(
@@ -955,11 +1074,11 @@ def S_curve_plot(
     )
     plt.plot(time, S_Values[selected_indices].T, alpha=0.7)
 
-    plt.xlabel("Time [yrs]")
-    plt.ylabel("Percentage [%]")
+    plt.xlabel("Years [yrs]")
+    plt.ylabel("Adoption Level [%]")
     plt.legend()
     plt.grid()
-    plt.title("Technology Adoption with Standard S-Curve")
+    plt.title("LH Technology Adoption Scenarios with Base S-Curve")
 
     # Saving the plot
     if save_plot:
@@ -968,12 +1087,12 @@ def S_curve_plot(
 
         # Preparing a safe file name and avoiding overwrites
         filename_safe_title = "S_Curve_Plot"
-        base_filename = f"{filename_safe_title}.png"
+        base_filename = f"{filename_safe_title}.pdf"
         plot_path = os.path.join(folder_path, base_filename)
 
         counter = 1
         while os.path.exists(plot_path):
-            base_filename = f"{filename_safe_title}_{counter}.png"
+            base_filename = f"{filename_safe_title}_{counter}.pdf"
             plot_path = os.path.join(folder_path, base_filename)
             counter += 1
 
@@ -2412,7 +2531,7 @@ def CDF_Plot(
 
     ax.grid(True)
     ax.set_title("Cumulative Distribution Function (CDF)")
-    ax.set_xlabel("NPVs")
+    ax.set_xlabel("Net Present Value [USD]")
     ax.set_ylabel("Cumulative Probability [%]")
     ax.legend()
 
@@ -2424,12 +2543,12 @@ def CDF_Plot(
         os.makedirs(folder_path, exist_ok=True)
 
         filename_safe_title = "CDF_Plot"
-        base_filename = f"{filename_safe_title}.png"
+        base_filename = f"{filename_safe_title}.pdf"
         plot_path = os.path.join(folder_path, base_filename)
 
         counter = 1
         while os.path.exists(plot_path):
-            base_filename = f"{filename_safe_title}_{counter}.png"
+            base_filename = f"{filename_safe_title}_{counter}.pdf"
             plot_path = os.path.join(folder_path, base_filename)
             counter += 1
 
