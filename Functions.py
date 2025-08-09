@@ -154,7 +154,7 @@ def Scenario_plot(
     # Parameters
     Fth = Param["Fth"] + 1
     n = Param["No_Forecasts_plot"]
-    colors = ["blue", "green", "red"]
+    colors = ["green", "blue", "red"]
 
     # Setting the random seed for reproducibility
     np.random.seed(Param["seed"])
@@ -867,14 +867,14 @@ def ATM_plot(ATM_Fleet, Param):
     plt.plot(
         time,
         ATM_Fleet[selected_indices[0], :, 0],
-        color="blue",
+        color="green",
         label="Short-haul Fleet",
         linewidth=2,
     )
     plt.plot(
         time,
         ATM_Fleet[selected_indices[0], :, 1],
-        color="green",
+        color="blue",
         label="Medium-haul Fleet",
         linewidth=2,
     )
