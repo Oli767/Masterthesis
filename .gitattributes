@@ -4,3 +4,4 @@ Plots/*.png filter=lfs diff=lfs merge=lfs -text
 Plots/*.jpg filter=lfs diff=lfs merge=lfs -text
 Plots/*.pdf filter=lfs diff=lfs merge=lfs -text
 MT_Test_Data.pkl filter=lfs diff=lfs merge=lfs -text
+MT_Experiment_Data.pkl filter=lfs diff=lfs merge=lfs -text
