@@ -1647,15 +1647,15 @@ def Revenue_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
     # Calculating the operational expenditure based on the demand and capacity
     # k_Jet > d_Jet
     R_Jet_greater = (
-        greater * D_Jet_yearly * (p_dock * re_Dock_Jet)
-        + (1 - p_dock) * re_Open_Jet
-        + rf_Jet
+        greater
+        * D_Jet_yearly
+        * ((p_dock * re_Dock_Jet) + (1 - p_dock) * re_Open_Jet + rf_Jet)
     )
     # k_Jet <= d_Jet
     R_Jet_less_equal = (
-        less_equal * K_Jet_yearly * (p_dock * re_Dock_Jet)
-        + (1 - p_dock) * re_Open_Jet
-        + rf_Jet
+        less_equal
+        * K_Jet_yearly
+        * ((p_dock * re_Dock_Jet) + (1 - p_dock) * re_Open_Jet + rf_Jet)
     )
     # Combining the two conditions to get the final operational expenditure
     R_Jet = np.round(R_Jet_greater + R_Jet_less_equal, 2)
@@ -1729,15 +1729,15 @@ def Revenue_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
     # Calculating the operational expenditure based on the demand and capacity
     # k_LH > d_LH
     R_LH_greater = (
-        greater * D_LH_yearly * (p_dock * re_Dock_LH)
-        + (1 - p_dock) * re_Open_LH
-        + rf_LH
+        greater
+        * D_LH_yearly
+        * ((p_dock * re_Dock_LH) + (1 - p_dock) * re_Open_LH + rf_LH)
     )
     # k_LH <= d_LH
     R_LH_less_equal = (
-        less_equal * K_LH_yearly * (p_dock * re_Dock_LH)
-        + (1 - p_dock) * re_Open_LH
-        + rf_LH
+        less_equal
+        * K_LH_yearly
+        * ((p_dock * re_Dock_LH) + (1 - p_dock) * re_Open_LH + rf_LH)
     )
     # Combining the two conditions to get the final operational expenditure
     R_LH = np.round(R_LH_greater + R_LH_less_equal, 2)
