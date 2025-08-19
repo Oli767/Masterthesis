@@ -50,75 +50,6 @@ def Generate_scenarios(Param):
     return np.round(D, 0)
 
 
-# def Scenario_plot(
-#     Param,
-#     Scenarios,
-#     NoStep=True,
-#     Title="Demand Scenarios",
-#     label="Passenger Numbers",
-# ):
-#     """
-#     This function plots any data vector or matrix against the forecast time
-#     horizon vector Fth, allowing visualization of a selected number (n) of plots.
-
-#     Parameters:
-#         Param (dict): Parameter Dictionary
-#         Scenarios (ndarray): Scenario (Plotting) Data
-#         NoStep (bool): If True, uses a Line pPlot; Otherwise, a Step Plot
-#         Title (str): Title of the plot
-#         label (str): Y-Axis Description of the Plot
-
-#     Returns:
-#         None: Displays the Plot
-
-#     To call the function use following syntax:
-#         Scenario_plot(Param, Scenarios, NoStep, Title, label)
-#     """
-#     # Parameters
-#     Fth = Param["Fth"] + 1
-#     n = Param["No_Forecasts_plot"]
-#     colors = ["blue", "green", "red"]  # Define colors for the last dimension
-
-#     # Setting the random seed for reproducibility
-#     np.random.seed(Param["seed"])
-
-#     if isinstance(Scenarios, tuple):
-#         raise TypeError(
-#             "Scenarios is a Tuple! Please provide a NumPy array. At the function call Shock_generation the value of display should be set to false!"
-#         )
-
-#     # Checking if the input is 1D, if so reshaping to 2D
-#     if Scenarios.ndim == 1:
-#         Scenarios = Scenarios.reshape(1, -1)
-
-#     indices = np.random.choice(Scenarios.shape[0], size=n)
-#     Small_Scenario = Scenarios[indices]
-#     plotvector = np.arange(Fth)
-
-#     # Checking if the input is 3D
-#     if Small_Scenario.ndim == 3 and Small_Scenario.shape[2] == 3:
-#         for i in range(3):
-#             for scenario in Small_Scenario[:, :, i]:
-#                 if NoStep:
-#                     plt.plot(plotvector, scenario, color=colors[i], alpha=0.5)
-#                 else:
-#                     plt.step(
-#                         plotvector, scenario, where="post", color=colors[i], alpha=0.5
-#                     )
-#     else:
-#         for scenario in Small_Scenario:
-#             if NoStep:
-#                 plt.plot(plotvector, scenario, label="Scenario")
-#             else:
-#                 plt.step(plotvector, scenario, where="post", label="Scenario")
-
-#     plt.grid(True)
-#     plt.xlabel("Years")
-#     plt.ylabel(label)
-#     plt.title(Title)
-#     plt.show()
-
-
 def Scenario_plot(
     Param,
     Scenarios,
@@ -127,6 +58,8 @@ def Scenario_plot(
     label="Passenger Numbers",
     save_plot=False,
     run_name="Undefined_Run",
+    use_subfolder=False,
+    subfolder_name="subfolder",
     output_base_folder="Plots",
 ):
     """
@@ -200,19 +133,22 @@ def Scenario_plot(
 
     # Saving the plot
     if save_plot:
-        # Folder: Plots/run_name/
+        # Folder: Plots/run_name/ or Plots/run_name/subfolder/
         folder_path = os.path.join(output_base_folder, run_name)
+        if use_subfolder and subfolder_name:
+            folder_path = os.path.join(folder_path, subfolder_name)
         os.makedirs(folder_path, exist_ok=True)
 
-        # Createing a safe filename
+        # Creating a safe filename with run_name
         filename_safe_title = Title.replace(" ", "_").replace("/", "_")
-        base_filename = f"{filename_safe_title}.pdf"
+        run_name_safe = run_name.replace(" ", "_")
+        base_filename = f"{filename_safe_title}_{run_name_safe}.pdf"
         plot_path = os.path.join(folder_path, base_filename)
 
         # Checking for duplicates and increment
         counter = 1
         while os.path.exists(plot_path):
-            base_filename = f"{filename_safe_title}_{counter}.pdf"
+            base_filename = f"{filename_safe_title}_{run_name_safe}_{counter}.pdf"
             plot_path = os.path.join(folder_path, base_filename)
             counter += 1
 
@@ -221,125 +157,6 @@ def Scenario_plot(
         print(f"Plot saved to: {os.path.abspath(plot_path)}")
 
     plt.show()
-
-
-# def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
-#     """
-#     This function simulates a demand shock and recovery process over a forecast period for multiple vectors
-#     by calling the Shock_vector function multiple times
-
-#     Parameters:
-#         Param (dict): Parameter Dictionary
-#         Forecast (np.array): Time Series Forecast Data
-#         num_shocks (int): Number of shocks (optional)
-#         display (bool): Display Number of Shocks -> Creates a Tuple -> Not for Suitable for Plotting Function
-
-#     Returns:
-#         Forecast_input (np.array): Updated Forecast with Shocks and Recovery Adjustments
-
-#     To call the function use following syntax:
-#         Shock_generation(Param, Forecast, num_shocks, display)
-#     """
-
-#     # Setting the random seed for reproducibility
-#     np.random.seed(Param["seed"])
-
-#     if (
-#         len(Forecast_input.shape) == 1
-#     ):  # If Forecast is a single vector, apply shock normally
-#         return Shock_vector(Param, Forecast_input)
-
-#     num_vectors = Forecast_input.shape[0]
-
-#     # Determining number of vectors with shocks (default: exponential distribution)
-#     if num_shocks is None:
-#         num_shocks = min(
-#             num_vectors, max(1, int(np.random.exponential(scale=Param["num_shocks"])))
-#         )
-
-#     # Randomly selecting `num_shocks` vectors to apply the shock
-#     chosen_vectors = np.random.choice(num_vectors, size=num_shocks, replace=False)
-
-#     for vector_index in chosen_vectors:
-#         Forecast_input[vector_index] = Shock_vector(Param, Forecast_input[vector_index])
-
-#     if display == True:
-#         return Forecast_input, num_shocks
-#     else:
-#         return Forecast_input
-
-
-# def Shock_vector(Param, Forecast_vector):
-#     """
-#     This function applies a demand shock and recovery process to a single given forecast vector.
-
-#     Parameters:
-#         Param (dict): Parameter Dictionary
-#         Forecast_vector (np.array): Given Vector to Apply a Shock
-
-#     Returns:
-#         Forecast_vector (np.array): Updated forecast vector with shock and recovery adjustments.
-
-#     To call the function use following syntax:
-#         Shock_vector(Param, Forecast_vector)
-#     """
-#     # Parameters
-#     shock_time_scale = Param["shock_scale"]
-#     recovery_time_scale = Param["recovery_scale"]
-#     recovery_time_sigma = Param["recovery_sigma"]
-#     shock_drop_scale = Param["shock_drop_scale"]
-#     recovery_steepness = Param["recovery_steepness"]
-
-#     # Using independent RNG for randomness per vector
-#     rng = np.random.default_rng(Param["seed"])
-
-#     # Calculating shock duration
-#     duration_shock = min(
-#         max(int(rng.exponential(scale=shock_time_scale) + 1), 2), int(Param["Fth"] / 2)
-#     )  # Randomizing shock duration
-#     duration_recovery = min(
-#         max(
-#             int(
-#                 np.round(
-#                     rng.lognormal(mean=recovery_time_scale, sigma=recovery_time_sigma)
-#                 )
-#             ),
-#             2,
-#         ),
-#         Param["Fth"] - duration_shock,
-#     )
-#     # Randomizing shock recovery
-#     duration_combined = duration_shock + duration_recovery
-#     duration = min(Param["Fth"], duration_combined)
-
-#     # Determining start index for the shock event
-#     max_start_index = len(Forecast_vector) - duration
-#     start_index = rng.integers(0, max_start_index)
-
-#     # Determining the shock and recovery parameters
-#     D0 = Forecast_vector[start_index]  # Initial demand value before shock
-#     target = Forecast_vector[start_index + duration]  # Target demand after recovery
-
-#     # Calculating the shock
-#     shock_drop = Param["Dt0"] * (shock_drop_scale / 100)
-#     delta_demand = max(
-#         -rng.exponential(scale=shock_drop), -D0
-#     )  # Randomizing shock intensity
-#     raw_splits = np.sort(rng.uniform(0, 1, duration_shock - 1))
-#     raw_splits = np.insert(raw_splits, 0, 0)
-#     raw_splits = np.append(raw_splits, 1)
-#     shock_vector = D0 + delta_demand * raw_splits
-
-#     # Calculating the shock recovery
-#     k = abs(rng.normal(loc=recovery_steepness, scale=0.1))  # Random recovery rate
-#     t = np.arange(1, duration_recovery)
-#     recovery_vector = target - (target - D0) * np.exp(-k * t)
-
-#     # Combining the shock and the shock recovery
-#     combined_vector = np.round(np.concatenate((shock_vector, recovery_vector)), 2)
-#     Forecast_vector[start_index : start_index + duration] = combined_vector
-
-#     return Forecast_vector
 
 
 def Shock_generation(Param, Forecast_input, num_shocks=None, display=False):
@@ -1026,6 +843,8 @@ def S_curve_plot(
     S_Values,
     save_plot=False,
     run_name="Undefined_Run",
+    use_subfolder=False,
+    subfolder_name="subfolder",
     output_base_folder="Plots",
 ):
     """
@@ -1083,16 +902,19 @@ def S_curve_plot(
     # Saving the plot
     if save_plot:
         folder_path = os.path.join(output_base_folder, run_name)
+        if use_subfolder and subfolder_name:
+            folder_path = os.path.join(folder_path, subfolder_name)
         os.makedirs(folder_path, exist_ok=True)
 
         # Preparing a safe file name and avoiding overwrites
         filename_safe_title = "S_Curve_Plot"
-        base_filename = f"{filename_safe_title}.pdf"
+        run_name_safe = run_name.replace(" ", "_")
+        base_filename = f"{filename_safe_title}_{run_name_safe}.pdf"
         plot_path = os.path.join(folder_path, base_filename)
 
         counter = 1
         while os.path.exists(plot_path):
-            base_filename = f"{filename_safe_title}_{counter}.pdf"
+            base_filename = f"{filename_safe_title}_{run_name_safe}_{counter}.pdf"
             plot_path = os.path.join(folder_path, base_filename)
             counter += 1
 
@@ -2535,7 +2357,7 @@ def CDF_Plot(
     ax.set_ylabel("Cumulative Probability [%]")
     ax.legend()
 
-    # SAVE the plot if requested
+    # Saving the plot if requested
     if save_plot and run_name is not None:
         import os
 
@@ -2543,12 +2365,13 @@ def CDF_Plot(
         os.makedirs(folder_path, exist_ok=True)
 
         filename_safe_title = "CDF_Plot"
-        base_filename = f"{filename_safe_title}.pdf"
+        run_name_safe = run_name.replace(" ", "_")
+        base_filename = f"{filename_safe_title}_{run_name_safe}.pdf"
         plot_path = os.path.join(folder_path, base_filename)
 
         counter = 1
         while os.path.exists(plot_path):
-            base_filename = f"{filename_safe_title}_{counter}.pdf"
+            base_filename = f"{filename_safe_title}_{run_name_safe}_{counter}.pdf"
             plot_path = os.path.join(folder_path, base_filename)
             counter += 1
 
@@ -2563,3 +2386,131 @@ def CDF_Plot(
     print(f"{label1}: {mean1}")
     print(f"{label2}: {mean2}")
     return
+
+
+def Cost_Rev_Vis(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly):
+    """
+    This function calculates the Cost and Revenues of the airport infrastructure project based on the
+    capital expenditure (Capex), operational expenditure (Opex), and revenues from Jet A1 and LH2 aircraft stands, as well as terminal and rental revenues.
+
+    Parameters:
+        Param (dict): Parameter Dictionary
+        delta_K (np.array): Aircraft Stand Capacity Change Vector
+        d_ATM (np.array): Total Air Traffic Movements
+        S_value_matrix (np.array): S-Curve Matrix for Technology Adoption
+        PAX_yearly (np.array): Number of Passengers per Year
+
+    Returns:
+        NPV (np.array): Net Present Value of the Airport Infrastructure Project
+
+    To call the function use following syntax:
+        NPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
+    """
+    # Parameters
+    discount_rate = Param["discount_rate"]  # Discount rate for NPV calculation
+    Initial_Investment = Param["Initial_Investment"]  # Initial investment
+
+    # If condition to adjust d_ATM shape
+    if d_ATM.ndim == 2:
+        d_Jet = d_ATM * (1 - S_values)  # Jet A1 aircraft demand
+        d_LH = d_ATM * S_values  # LH2 aircraft demand
+    elif d_ATM.ndim == 3:
+        d_Jet = np.round((d_ATM * (1 - S_values)[:, :, np.newaxis]), 0)
+        d_LH = np.round(d_ATM * S_values[:, :, np.newaxis], 0)
+    k_Jet = Capacity_3D(Param, delta_K_Jet)  # Jet A1 aircraft stand capacity
+    k_LH = Capacity_3D(Param, delta_K_LH, True)  # LH2 aircraft stand capacity
+
+    # Calculting the yearly capacit and yearly demand
+    K_Jet_yearly, K_Jet_mix_yearly = K_yearly(Param, k_Jet)
+    K_LH_yearly, K_LH_mix_yearly = K_yearly(Param, k_LH)
+    D_Jet_yearly, D_Jet_mix_yearly = ATM_yearly(Param, d_Jet)
+    D_LH_yearly, D_LH_mix_yearly = ATM_yearly(Param, d_LH)
+
+    Cost = Total_Cost_calculation(
+        Param,
+        delta_K_Jet,
+        delta_K_LH,
+        k_Jet,
+        k_LH,
+        d_Jet,
+        d_LH,
+        PAX_yearly,
+        K_Jet_yearly,
+        K_LH_yearly,
+        D_Jet_yearly,
+        D_LH_yearly,
+    )
+    Revenue = Total_Revenue_calculation(
+        Param,
+        k_Jet,
+        k_LH,
+        d_Jet,
+        d_LH,
+        PAX_yearly,
+        K_Jet_yearly,
+        K_LH_yearly,
+        D_Jet_yearly,
+        D_LH_yearly,
+    )
+    return Cost, Revenue
+
+
+def yearly_boxplot(
+    data,
+    title="Yearly Distribution",
+    ylabel="Value",
+    save_plot=False,
+    run_name="Undefined_Run",
+    use_subfolder=False,
+    subfolder_name="subfolder",
+    output_base_folder="Plots",
+):
+    """
+    This function plots a boxplot for each year (column) in the data array and optionally saves the plot.
+
+    Parameters:
+        data (np.array): shape (n_forecasts, n_years), e.g. (1000, 26)
+        title (str): Plot title
+        ylabel (str): Y-axis label
+        save_plot (bool): If True, saves the plot to a file
+        run_name (str): Subfolder name for organizing plots
+        output_base_folder (str): Base output folder for plots
+
+    Returns:
+        None
+    """
+    data = np.array(data)
+    n_years = data.shape[1]
+    plt.figure(figsize=(max(12, n_years * 0.5), 6))
+    plt.boxplot([data[:, i] for i in range(n_years)], patch_artist=True)
+    plt.xticks(
+        range(1, n_years + 1), [f"Year {i}" for i in range(0, n_years)], rotation=45
+    )
+    plt.xlabel("Year")
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.grid(True, linestyle="--", alpha=0.5)
+    plt.tight_layout()
+
+    # Saving the plot
+    if save_plot:
+        folder_path = os.path.join(output_base_folder, run_name)
+        if use_subfolder and subfolder_name:
+            folder_path = os.path.join(folder_path, subfolder_name)
+        os.makedirs(folder_path, exist_ok=True)
+
+        filename_safe_title = title.replace(" ", "_").replace("/", "_")
+        run_name_safe = run_name.replace(" ", "_")
+        base_filename = f"{filename_safe_title}_{run_name_safe}.pdf"
+        plot_path = os.path.join(folder_path, base_filename)
+
+        counter = 1
+        while os.path.exists(plot_path):
+            base_filename = f"{filename_safe_title}_{run_name_safe}_{counter}.pdf"
+            plot_path = os.path.join(folder_path, base_filename)
+            counter += 1
+
+        plt.savefig(plot_path)
+        print(f"Plot saved to: {os.path.abspath(plot_path)}")
+
+    plt.show()
