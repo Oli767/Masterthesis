@@ -127,7 +127,7 @@ def Scenario_plot(
                 plt.step(plotvector, scenario, where="post")
 
     plt.grid(True)
-    plt.xlabel("Years [yrs]")
+    plt.xlabel("Years")
     plt.ylabel(label)
     plt.title(Title)
 
@@ -830,7 +830,7 @@ def S_curve(Param):
 
 #     # Ploting the selected forecasts
 #     plt.plot(time, S_Values[selected_indices].T, alpha=0.7)
-#     plt.xlabel("Time [yrs]")
+#     plt.xlabel("Years")
 #     plt.ylabel("Percentage [%]")
 #     plt.legend()
 #     plt.grid()
@@ -893,7 +893,7 @@ def S_curve_plot(
     )
     plt.plot(time, S_Values[selected_indices].T, alpha=0.7)
 
-    plt.xlabel("Years [yrs]")
+    plt.xlabel("Years")
     plt.ylabel("Adoption Level [%]")
     plt.legend()
     plt.grid()
@@ -2486,7 +2486,7 @@ def yearly_boxplot(
     plt.xticks(
         range(1, n_years + 1), [f"Year {i}" for i in range(0, n_years)], rotation=45
     )
-    plt.xlabel("Year")
+    plt.xlabel("Years")
     plt.ylabel(ylabel)
     plt.title(title)
     plt.grid(True, linestyle="--", alpha=0.5)
