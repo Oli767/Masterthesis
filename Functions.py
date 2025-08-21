@@ -1091,7 +1091,7 @@ def Capex_LH(Param, delta_K_LH, D_LH_yearly):
         D_LH_yearly (np.array): LH2 Aircraft Movement Demand per year
 
     Returns:
-        CI_LH (np.array): Installation Cost for LH2 aircraft stands in USD
+        CI_LH (np.array): Installation Cost for LH2 aircraft stands in CHF
 
     To call the function use following syntax:
         Capex_LH(Param, delta_K_LH, D_LH_yearly)
@@ -1169,7 +1169,7 @@ def Opex_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly):
         D_Jet_yearly (np.array): Yearly Demand Vector yearly
 
     Returns:
-        CO_Jet (np.array): Operating Cost for Jet A1 aircraft stands in USD
+        CO_Jet (np.array): Operating Cost for Jet A1 aircraft stands in CHF
 
     To call the function use following syntax:
         Opex_Jet(Param, k_Jet, d_Jet, K_Jet_yearly, D_Jet_yearly)
@@ -1254,7 +1254,7 @@ def Opex_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly):
         D_LH_yearly (np.array): Yearly Demand Vector
 
     Returns:
-        CO_LH (np.array): Operating Cost for LH2 aircraft stands in USD
+        CO_LH (np.array): Operating Cost for LH2 aircraft stands in CHF
 
     To call the function use following syntax:
         Opex_LH(Param, k_LH, d_LH, K_LH_yearly, D_LH_yearly)
@@ -1342,7 +1342,7 @@ def Opex_Terminal(Param, PAX_yearly):
     # Parameters
     CE_Terminal = Param[
         "CE_Terminal"
-    ]  # Cost of terminal operations in USD per passenger
+    ]  # Cost of terminal operations in CHF per passenger
 
     CO_Terminal = np.round(PAX_yearly * CE_Terminal, 2)
 
@@ -1596,7 +1596,7 @@ def Revenue_Rent(Param, k_Jet, k_LH):
         k_LH (np.array): Total Capacity in the DHL for LH2 aircraft stands
 
     Returns:
-        R_Rent (np.array): Revenue from renting out spaces in USD
+        R_Rent (np.array): Revenue from renting out spaces in CHF
 
     To call the function use following syntax:
         Reveneue_Rent(Param, K)
@@ -1768,7 +1768,7 @@ def ENPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly
         PAX_yearly (np.array): Number of Passengers per Year
 
     Returns:
-        ENPV (float): Expected Net Present Value of the Airport Infrastructure Project in USD
+        ENPV (float): Expected Net Present Value of the Airport Infrastructure Project in CHF
 
     To call the function use following syntax:
         ENPV_calculation(Param, delta_K_Jet, delta_K_LH, d_ATM, S_values, PAX_yearly)
@@ -2353,7 +2353,7 @@ def CDF_Plot(
 
     ax.grid(True)
     ax.set_title("Cumulative Distribution Function (CDF)")
-    ax.set_xlabel("Net Present Value [USD]")
+    ax.set_xlabel("Net Present Value [CHF]")
     ax.set_ylabel("Cumulative Probability [%]")
     ax.legend()
 
